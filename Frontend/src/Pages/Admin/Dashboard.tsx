@@ -1,0 +1,702 @@
+import React, {
+  useEffect,
+  useState,
+  type ChangeEvent,
+  type FormEvent,
+} from "react";
+import {
+  FaPlus,
+  FaChevronLeft,
+  FaChevronRight,
+  FaCheckCircle,
+  FaTimesCircle,
+  FaTrash,
+  FaEdit,
+} from "react-icons/fa";
+import axios from "axios";
+import Modal from "../../Components/Modal";
+import { Toast } from "../../Components/Toast";
+import Swal from "sweetalert2";
+
+type User = {
+  _id: string;
+  fullName: string;
+  email: string;
+  status: "Active" | "Inactive";
+  role: "user" | "admin";
+};
+
+type Pagination = {
+  currentPage: number;
+  totalPages: number;
+  totalUsers: number;
+};
+
+const Dashboard: React.FC = () => {
+  const [users, setUsers] = useState<User[]>([]);
+  const [userTimeEntries, setUserTimeEntries] = useState<
+    {
+      userId: string;
+      inTime: Date | null;
+      outTime: Date | null;
+      workingHours: String;
+    }[]
+  >([]);
+  const [pagination, setPagination] = useState<Pagination>({
+    currentPage: 1,
+    totalPages: 1,
+    totalUsers: 0,
+  });
+  const [loading, setLoading] = useState(false);
+
+  const [showAddModal, setShowAddModal] = useState(false);
+  const [showEditModal, setShowEditModal] = useState(false);
+  const [editUser, setEditUser] = useState<User | null>(null);
+  const [form, setForm] = useState({
+    firstName: "",
+    lastName: "",
+    email: "",
+    password: "",
+    confirmPassword: "",
+    role: "user" as "user" | "admin",
+  });
+
+  const API_URL = import.meta.env.VITE_API_URL as string;
+
+  const fetchUsers = async (page = 1) => {
+    setLoading(true);
+    try {
+      const response = await axios.get(`${API_URL}users`, {
+        params: {
+          page,
+          limit: 10,
+        },
+        headers: {
+          Authorization: `Bearer ${localStorage.getItem("token")}`,
+        },
+      });
+      setUsers(response.data.users);
+      setPagination({
+        currentPage: response.data.currentPage,
+        totalPages: response.data.totalPages,
+        totalUsers: response.data.totalUsers,
+      });
+    } catch (error) {
+      Toast.fire({
+        icon: "error",
+        title: "Failed to fetch users",
+      });
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const fetchUserTimeEntries = async () => {
+    const today = new Date().toISOString().split("T")[0];
+    try {
+      const response = await axios.get(
+        `${API_URL}time/userTime?date=${today}`,
+        {
+          headers: {
+            Authorization: `Bearer ${localStorage.getItem("token")}`,
+          },
+        }
+      );
+      setUserTimeEntries(response.data);
+      return response.data;
+    } catch (error) {
+      Toast.fire({
+        icon: "error",
+        title: "Failed to fetch user time entries",
+      });
+      return [];
+    }
+  };
+
+  useEffect(() => {
+    fetchUsers(pagination.currentPage);
+    fetchUserTimeEntries();
+  }, [pagination.currentPage]);
+
+  const handleAddUser = async (e: FormEvent) => {
+    e.preventDefault();
+    if (
+      !form.firstName ||
+      !form.lastName ||
+      !form.email ||
+      !form.password ||
+      form.password !== form.confirmPassword
+    ) {
+      Toast.fire({
+        icon: "error",
+        title: "Please fill in all fields",
+      });
+      return;
+    }
+    try {
+      await axios.post(
+        `${API_URL}register`,
+        {
+          firstName: form.firstName,
+          lastName: form.lastName,
+          email: form.email,
+          password: form.password,
+          confirmPassword: form.confirmPassword,
+          role: form.role,
+        },
+        {
+          headers: {
+            Authorization: `Bearer ${localStorage.getItem("token")}`,
+          },
+        }
+      );
+      Toast.fire({
+        icon: "success",
+        title: "User created successfully",
+      });
+      fetchUsers(1);
+      closeModals();
+    } catch (err: any) {
+      Toast.fire({
+        icon: "error",
+        title: err.response?.data?.message || "Failed to create user",
+      });
+    }
+  };
+
+  const handleEditUser = async (e: FormEvent) => {
+    e.preventDefault();
+    if (!editUser) return;
+    try {
+      await axios.put(
+        `${API_URL}users/${editUser._id}`,
+        {
+          firstName: form.firstName,
+          lastName: form.lastName,
+          email: form.email,
+        },
+        {
+          headers: {
+            Authorization: `Bearer ${localStorage.getItem("token")}`,
+          },
+        }
+      );
+      Toast.fire({
+        icon: "success",
+        title: "User updated successfully",
+      });
+      fetchUsers(pagination.currentPage);
+      closeModals();
+    } catch (error: any) {
+      Toast.fire({
+        icon: "error",
+        title: error.response?.data?.message || "Failed to update user",
+      });
+    }
+  };
+
+  const handleDeleteUser = async (userId: string, fullName: string) => {
+    Swal.fire({
+      title: `You're about to permanently delete ${fullName} !!!`,
+      icon: "warning",
+      showCancelButton: true,
+      confirmButtonColor: "#3085d6",
+      cancelButtonColor: "#d33",
+      confirmButtonText: "Yes, delete it!",
+    }).then(async (result) => {
+      if (result.isConfirmed) {
+        try {
+          await axios.delete(`${API_URL}users/${userId}`, {
+            headers: {
+              Authorization: `Bearer ${localStorage.getItem("token")}`,
+            },
+          });
+          Toast.fire({
+            icon: "success",
+            title: "User deleted successfully",
+          });
+          fetchUsers(pagination.currentPage);
+        } catch (error: any) {
+          Toast.fire({
+            icon: "error",
+            title: error.response?.data?.message || "Failed to delete user",
+          });
+        }
+      }
+    });
+  };
+
+  const openAddModal = () => {
+    setForm({
+      firstName: "",
+      lastName: "",
+      email: "",
+      password: "",
+      confirmPassword: "",
+      role: "user",
+    });
+    setShowAddModal(true);
+  };
+
+  const openEditModal = (user: User) => {
+    const [firstName, ...rest] = user.fullName.split(" ");
+    setForm({
+      firstName: firstName,
+      lastName: rest.join(" "),
+      email: user.email,
+      password: "",
+      confirmPassword: "",
+      role: user.role,
+    });
+    setEditUser(user);
+    setShowEditModal(true);
+  };
+
+  const closeModals = () => {
+    setShowAddModal(false);
+    setShowEditModal(false);
+    setEditUser(null);
+  };
+
+  const renderPagination = () => (
+    <nav className="relative z-0 inline-flex rounded-md shadow-sm -space-x-px">
+      <button
+        onClick={() =>
+          setPagination((prev) => ({
+            ...prev,
+            currentPage: Math.max(1, prev.currentPage - 1),
+          }))
+        }
+        disabled={pagination.currentPage === 1}
+        className="relative inline-flex items-center px-2 py-2 rounded-l-md border border-gray-300 bg-white text-sm font-medium text-gray-500 hover:bg-gray-50"
+      >
+        <FaChevronLeft />
+      </button>
+      {Array.from({ length: pagination.totalPages }, (_, i) => (
+        <button
+          key={i + 1}
+          onClick={() =>
+            setPagination((prev) => ({
+              ...prev,
+              currentPage: i + 1,
+            }))
+          }
+          className={`relative inline-flex items-center px-4 py-2 border text-sm font-medium ${
+            pagination.currentPage === i + 1
+              ? "z-10 bg-indigo-50 border-indigo-500 text-indigo-600"
+              : "bg-white border-gray-300 text-gray-500 hover:bg-gray-50"
+          }`}
+        >
+          {i + 1}
+        </button>
+      ))}
+      <button
+        onClick={() =>
+          setPagination((prev) => ({
+            ...prev,
+            currentPage: Math.min(prev.totalPages, prev.currentPage + 1),
+          }))
+        }
+        disabled={pagination.currentPage === pagination.totalPages}
+        className="relative inline-flex items-center px-2 py-2 rounded-r-md border border-gray-300 bg-white text-sm font-medium text-gray-500 hover:bg-gray-50"
+      >
+        <FaChevronRight />
+      </button>
+    </nav>
+  );
+
+  const handleFormChange = (
+    e: ChangeEvent<HTMLInputElement | HTMLSelectElement>
+  ) => {
+    const { name, value } = e.target;
+    setForm((prev) => ({
+      ...prev,
+      [name]: value,
+    }));
+  };
+
+  return (
+    <div className="font-sans antialiased bg-gray-50 min-h-screen">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        <header>
+          <div className="flex justify-between items-center mb-8">
+            <div>
+              <h1 className="text-2xl font-bold text-gray-800">
+                User Management
+              </h1>
+              <p className="pt-2 px-1 text-sm text-gray-600">
+                Today is{" "}
+                <span className="font-medium">{new Date().toDateString()}</span>
+              </p>
+            </div>
+            <button
+              onClick={openAddModal}
+              className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500"
+            >
+              <FaPlus className="mr-2" /> Add User
+            </button>
+          </div>
+        </header>
+
+        {/* Users Table */}
+        <div className="bg-white shadow overflow-hidden sm:rounded-lg">
+          <div className="overflow-x-auto">
+            <table className="min-w-full divide-y divide-gray-200">
+              <thead className="bg-gray-50">
+                <tr>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    Name
+                  </th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    Email
+                  </th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    Status
+                  </th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    Last Active
+                  </th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    Working Hours(hh:mm:ss)
+                  </th>
+                  <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    Actions
+                  </th>
+                </tr>
+              </thead>
+              <tbody className="bg-white divide-y divide-gray-200">
+                {loading ? (
+                  <tr>
+                    <td colSpan={6} className="text-center py-6 text-gray-500">
+                      Loading...
+                    </td>
+                  </tr>
+                ) : users.length === 0 ? (
+                  <tr>
+                    <td colSpan={6} className="text-center py-6 text-gray-500">
+                      No users found.
+                    </td>
+                  </tr>
+                ) : (
+                  users.map((user) => (
+                    <tr key={user._id}>
+                      <td className="px-6 py-4 whitespace-nowrap">
+                        {user.fullName}
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap">
+                        {user.email}
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap">
+                        {userTimeEntries.some(
+                          (entry) =>
+                            entry.userId === user._id && entry.outTime === null
+                        ) ? (
+                          <span className="inline-flex items-center px-2 py-1 rounded text-xs font-medium bg-green-100 text-green-500">
+                            <FaCheckCircle className="mr-1" /> Active
+                          </span>
+                        ) : (
+                          <span className="inline-flex items-center px-2 py-1 rounded text-xs font-medium bg-gray-100 text-gray-800">
+                            <FaTimesCircle className="mr-1" /> Inactive
+                          </span>
+                        )}
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap">
+                        {userTimeEntries.filter(
+                          (entry) => entry.userId === user._id
+                        ).length > 0
+                          ? (() => {
+                              const latestEntry = userTimeEntries
+                                .filter((entry) => entry.userId === user._id)
+                                .sort((a, b) => {
+                                  const timeA = a.inTime
+                                    ? new Date(a.inTime).getTime()
+                                    : 0;
+                                  const timeB = b.inTime
+                                    ? new Date(b.inTime).getTime()
+                                    : 0;
+                                  return timeB - timeA;
+                                })[0];
+
+                              return latestEntry?.outTime
+                                ? new Date(latestEntry.outTime).toLocaleString()
+                                : "-";
+                            })()
+                          : "No entries"}
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap">
+                        {userTimeEntries.filter(
+                          (entry) => entry.userId === user._id
+                        ).length > 0
+                          ? (() => {
+                              const totalWorkedMs = userTimeEntries
+                                .filter((entry) => entry.userId === user._id)
+                                .reduce((total, entry) => {
+                                  const entryDuration =
+                                    entry.outTime && entry.inTime
+                                      ? new Date(entry.outTime).getTime() -
+                                        new Date(entry.inTime).getTime()
+                                      : 0;
+                                  return total + entryDuration;
+                                }, 0);
+
+                              const totalSeconds = Math.floor(
+                                totalWorkedMs / 1000
+                              );
+                              const hours = Math.floor(totalSeconds / 3600);
+                              const minutes = Math.floor(
+                                (totalSeconds % 3600) / 60
+                              );
+                              const seconds = totalSeconds % 60;
+
+                              return `${String(hours).padStart(
+                                2,
+                                "0"
+                              )}:${String(minutes).padStart(2, "0")}:${String(
+                                seconds
+                              ).padStart(2, "0")}`;
+                            })()
+                          : 0}
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap text-right space-x-2">
+                        <button
+                          className="p-1 rounded hover:bg-indigo-50 text-indigo-600"
+                          title="Edit"
+                          onClick={() => openEditModal(user)}
+                        >
+                          <FaEdit />
+                        </button>
+                        <button
+                          className="p-1 rounded hover:bg-red-50 text-red-600"
+                          title="Delete"
+                          onClick={() =>
+                            handleDeleteUser(user._id, user.fullName)
+                          }
+                        >
+                          <FaTrash />
+                        </button>
+                      </td>
+                    </tr>
+                  ))
+                )}
+              </tbody>
+            </table>
+          </div>
+          {/* Pagination */}
+          <div className="bg-white px-4 py-3 flex items-center justify-between border-t border-gray-200 sm:px-6">
+            <div className="hidden sm:flex-1 sm:flex sm:items-center sm:justify-between">
+              <div>
+                <p className="text-sm text-gray-700">
+                  Showing{" "}
+                  <span className="font-medium">
+                    {(pagination.currentPage - 1) * 10 + 1}
+                  </span>{" "}
+                  to{" "}
+                  <span className="font-medium">
+                    {Math.min(
+                      pagination.currentPage * 10,
+                      pagination.totalUsers
+                    )}
+                  </span>{" "}
+                  of{" "}
+                  <span className="font-medium">{pagination.totalUsers}</span>{" "}
+                  results
+                </p>
+              </div>
+              <div>{renderPagination()}</div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* Add User Modal */}
+      <Modal isOpen={showAddModal} onClose={closeModals}>
+        <div className="bg-white rounded-lg shadow-lg max-w-lg w-full p-6">
+          <h3 className="text-lg font-medium text-gray-900 mb-4">
+            Add New User
+          </h3>
+          <form onSubmit={handleAddUser} className="space-y-4">
+            <div className="flex gap-2">
+              <div>
+                <label className="block text-sm font-medium text-gray-700">
+                  First Name
+                </label>
+                <input
+                  type="text"
+                  name="firstName"
+                  value={form.firstName}
+                  onChange={handleFormChange}
+                  className="mt-1 block w-full border-gray-300 border rounded-md focus:outline-none focus:ring-4 focus:ring-indigo-700 p-2"
+                  required
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700">
+                  Last Name
+                </label>
+                <input
+                  type="text"
+                  name="lastName"
+                  value={form.lastName}
+                  onChange={handleFormChange}
+                  className="mt-1 block w-full border-gray-300 border rounded-md focus:outline-none focus:ring-4 focus:ring-indigo-700 p-2"
+                  required
+                />
+              </div>
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700">
+                Email
+              </label>
+              <input
+                type="email"
+                name="email"
+                value={form.email}
+                onChange={handleFormChange}
+                className="mt-1 block w-full border-gray-300 border rounded-md focus:outline-none focus:ring-4 focus:ring-indigo-700 p-2"
+                required
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700">
+                Role
+              </label>
+              <select
+                name="role"
+                value={form.role}
+                onChange={handleFormChange}
+                className="mt-1 block w-full border-gray-300 border rounded-md focus:outline-none focus:ring-4 focus:ring-indigo-700 p-2"
+                required
+              >
+                <option value="user">User</option>
+                <option value="admin">Admin</option>
+              </select>
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700">
+                Password
+              </label>
+              <input
+                type="password"
+                name="password"
+                value={form.password}
+                onChange={handleFormChange}
+                className="mt-1 block w-full border-gray-300 border rounded-md focus:outline-none focus:ring-4 focus:ring-indigo-700 p-2"
+                required
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700">
+                Confirm Password
+              </label>
+              <input
+                type="password"
+                name="confirmPassword"
+                value={form.confirmPassword}
+                onChange={handleFormChange}
+                className="mt-1 block w-full border-gray-300 border rounded-md focus:outline-none focus:ring-4 focus:ring-indigo-700 p-2"
+                required
+              />
+            </div>
+            <div className="flex justify-end space-x-2 mt-4">
+              <button
+                type="submit"
+                className="px-4 py-2 bg-indigo-600 text-white rounded-md"
+              >
+                Save
+              </button>
+              <button
+                type="button"
+                onClick={closeModals}
+                className="px-4 py-2 bg-gray-200 text-gray-700 rounded-md"
+              >
+                Cancel
+              </button>
+            </div>
+          </form>
+        </div>
+      </Modal>
+
+      {/* Edit User Modal */}
+      <Modal isOpen={showEditModal} onClose={closeModals}>
+        <div className="bg-white rounded-lg shadow-lg max-w-lg w-full p-6">
+          <h3 className="text-lg font-medium text-gray-900 mb-4">Edit User</h3>
+          <form onSubmit={handleEditUser} className="space-y-4">
+            <div className="flex gap-2">
+              <div>
+                <label className="block text-sm font-medium text-gray-700">
+                  First Name
+                </label>
+                <input
+                  type="text"
+                  name="firstName"
+                  value={form.firstName}
+                  onChange={handleFormChange}
+                  className="mt-1 block w-full border-gray-300 border rounded-md focus:outline-none focus:ring-4 focus:ring-indigo-700 p-2"
+                  required
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700">
+                  Last Name
+                </label>
+                <input
+                  type="text"
+                  name="lastName"
+                  value={form.lastName}
+                  onChange={handleFormChange}
+                  className="mt-1 block w-full border-gray-300 border rounded-md focus:outline-none focus:ring-4 focus:ring-indigo-700 p-2"
+                  required
+                />
+              </div>
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700">
+                Email
+              </label>
+              <input
+                type="email"
+                name="email"
+                value={form.email}
+                onChange={handleFormChange}
+                className="mt-1 block w-full border-gray-300 border rounded-md focus:outline-none focus:ring-4 focus:ring-indigo-700 p-2"
+                required
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700">
+                Role
+              </label>
+              <select
+                name="role"
+                value={form.role}
+                onChange={handleFormChange}
+                className="mt-1 block w-full border-gray-300 border rounded-md focus:outline-none focus:ring-4 focus:ring-indigo-700 p-2"
+                required
+              >
+                <option value="user">User</option>
+                <option value="admin">Admin</option>
+              </select>
+            </div>
+            <div className="flex justify-end space-x-2 mt-4">
+              <button
+                type="submit"
+                className="px-4 py-2 bg-indigo-600 text-white rounded-md"
+              >
+                Save
+              </button>
+              <button
+                type="button"
+                onClick={closeModals}
+                className="px-4 py-2 bg-gray-200 text-gray-700 rounded-md"
+              >
+                Cancel
+              </button>
+            </div>
+          </form>
+        </div>
+      </Modal>
+    </div>
+  );
+};
+
+export default Dashboard;
