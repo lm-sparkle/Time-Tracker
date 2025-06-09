@@ -17,7 +17,7 @@ app.use(express.json());
 
 app.use(
   cors({
-    origin: ["http://192.168.1.27:5173", "http://localhost:5173", "http://localhost:4173"],
+    origin: ["http://192.168.1.27:5173", "http://localhost:5173", "http://localhost:4173", "https://time-tracker-sparkle.vercel.app"],
     methods: "GET,POST,PUT,DELETE",
     allowedHeaders: ["Content-Type", "Authorization"],
   })
