@@ -7,7 +7,6 @@ import {
   FaDoorOpen,
   FaClipboardCheck,
   FaTimes,
-  FaEnvelope,
   FaTag,
   FaPaperPlane,
   FaClock,
@@ -64,7 +63,6 @@ const HomePage: React.FC = () => {
   //Modal state
   const [showConfirmModal, setShowConfirmModal] = useState(false);
   const [isModalOpen, setIsModalOpen] = useState(false);
-  const [recipient, setRecipient] = useState<string>();
   const [subject, setSubject] = useState<string>();
   const [message, setMessage] = useState<string>();
   const modalRef = useRef<HTMLDivElement>(null);
@@ -183,7 +181,6 @@ const HomePage: React.FC = () => {
         },
       }
     );
-    setRecipient(response.data.adminEmail);
     setSubject(response.data.subject);
   };
 
@@ -737,28 +734,6 @@ const HomePage: React.FC = () => {
             </div>
             <div className="p-6 space-y-6">
               <form className="space-y-4" onSubmit={handleSubmit}>
-                {/* <div>
-                  <label
-                    htmlFor="recipient"
-                    className="block text-sm font-medium text-gray-700 mb-1"
-                  >
-                    Mail To
-                  </label>
-                  <div className="relative">
-                    <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                      <FaEnvelope className="text-gray-400" />
-                    </div>
-                    <input
-                      type="email"
-                      id="recipient"
-                      value={recipient}
-                      required
-                      onChange={(e) => setRecipient(e.target.value)}
-                      className="pl-10 w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 py-2 border disabled:opacity-50"
-                      disabled
-                    />
-                  </div>
-                </div> */}
                 <div>
                   <label
                     htmlFor="subject"
@@ -799,13 +774,6 @@ const HomePage: React.FC = () => {
                   />
                 </div>
                 <div className="flex justify-end space-x-3 pt-4">
-                  {/* <button
-                    type="button"
-                    onClick={closeModals}
-                    className="px-4 py-2 border border-gray-300 rounded-md text-gray-700 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 transition"
-                  >
-                    Cancel
-                  </button> */}
                   <button
                     type="submit"
                     className="px-6 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 transition flex items-center"
