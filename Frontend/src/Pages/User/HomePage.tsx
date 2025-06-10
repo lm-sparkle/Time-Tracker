@@ -439,7 +439,7 @@ const HomePage: React.FC = () => {
                   </div>
                   <div className="ml-5 w-0 flex-1">
                     <dt className="text-sm font-medium text-gray-500 truncate">
-                      Current Status
+                      Tracker Status
                     </dt>
                     <dd className="flex items-baseline">
                       <div className="text-2xl font-semibold text-gray-900">
@@ -459,7 +459,7 @@ const HomePage: React.FC = () => {
                   </div>
                   <div className="ml-5 w-0 flex-1">
                     <dt className="text-sm font-medium text-gray-500 truncate">
-                      Total Hours Today
+                      Logged Time
                     </dt>
                     <dd className="flex items-baseline">
                       <div className="text-2xl font-semibold text-gray-900">
@@ -487,7 +487,7 @@ const HomePage: React.FC = () => {
                   </div>
                   <div className="ml-5 w-0 flex-1">
                     <dt className="text-sm font-medium text-gray-500 truncate">
-                      Total Break Hours Today
+                      Break Time
                     </dt>
                     <dd className="flex items-baseline">
                       <div className="text-2xl font-semibold text-gray-900">
