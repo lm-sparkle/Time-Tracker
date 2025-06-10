@@ -209,7 +209,7 @@ const HomePage: React.FC = () => {
         fetchUserTimes();
       }
     } catch (err) {
-      console.log(err);
+      console.error(err);
     }
   };
 
@@ -273,7 +273,6 @@ const HomePage: React.FC = () => {
 
       setBreakSeconds(breakSeconds);
       setTotalBreakTime(response?.data?.formattedBreakTime);
-      console.log(response?.data?.formattedBreakTime, "formattedBreakTime");
 
       if (data.length > 0) {
         const latestEntry = data[0];
@@ -368,7 +367,7 @@ const HomePage: React.FC = () => {
       localStorage.setItem("time_Id", response.data?.[0]?._id);
       setStatus(response.data?.[0]?.status || "not_clocked_in");
     } catch (err) {
-      console.log(err);
+      console.error(err);
     }
   };
 
@@ -388,6 +387,7 @@ const HomePage: React.FC = () => {
         }time/final-clock-out/${localStorage.getItem("time_Id")}`,
         {
           userId: user?.id,
+          userName: user?.fullName,
           userMail: user?.email,
           message: message,
           inTime: userInTime,
@@ -413,7 +413,7 @@ const HomePage: React.FC = () => {
       fetchUserLatestTime();
       fetchUserTimes();
     } catch (err) {
-      console.log(err);
+      console.error(err);
     }
   };
 
@@ -728,10 +728,16 @@ const HomePage: React.FC = () => {
               <h2 className="text-2xl font-bold text-white flex items-center">
                 <FaClipboardCheck className="mr-3" /> Daily Status Update
               </h2>
+              <button
+                onClick={closeModals}
+                className="text-white hover:text-gray-200 text-2xl focus:outline-none transition duration-200"
+              >
+                <FaTimes />
+              </button>
             </div>
             <div className="p-6 space-y-6">
               <form className="space-y-4" onSubmit={handleSubmit}>
-                <div>
+                {/* <div>
                   <label
                     htmlFor="recipient"
                     className="block text-sm font-medium text-gray-700 mb-1"
@@ -752,7 +758,7 @@ const HomePage: React.FC = () => {
                       disabled
                     />
                   </div>
-                </div>
+                </div> */}
                 <div>
                   <label
                     htmlFor="subject"

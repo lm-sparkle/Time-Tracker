@@ -8,10 +8,12 @@ import {
   FaPlus,
   FaChevronLeft,
   FaChevronRight,
-  FaCheckCircle,
-  FaTimesCircle,
   FaTrash,
   FaEdit,
+  FaCircle,
+  FaTimesCircle,
+  FaExclamationCircle,
+  FaCheckCircle,
 } from "react-icons/fa";
 import axios from "axios";
 import Modal from "../../Components/Modal";
@@ -22,8 +24,9 @@ type User = {
   _id: string;
   fullName: string;
   email: string;
-  status: "Active" | "Inactive";
+  status: "Online" | "Offline";
   role: "user" | "admin";
+  isActive: boolean;
 };
 
 type Pagination = {
@@ -51,6 +54,12 @@ const Dashboard: React.FC = () => {
 
   const [showAddModal, setShowAddModal] = useState(false);
   const [showEditModal, setShowEditModal] = useState(false);
+
+  const [showStatusModal, setShowStatusModal] = useState(false);
+  const [statusUser, setStatusUser] = useState<User | null>(null);
+  const [pendingStatus, setPendingStatus] = useState<boolean | null>(true);
+  const [statusLoading, setStatusLoading] = useState(false);
+
   const [editUser, setEditUser] = useState<User | null>(null);
   const [form, setForm] = useState({
     firstName: "",
@@ -110,6 +119,30 @@ const Dashboard: React.FC = () => {
         title: "Failed to fetch user time entries",
       });
       return [];
+    }
+  };
+
+  const activateUser = async (userId: string, isActive: boolean) => {
+    try {
+      await axios.put(
+        `${API_URL}users/status/${userId}`,
+        {},
+        {
+          headers: {
+            Authorization: `Bearer ${localStorage.getItem("token")}`,
+          },
+        }
+      );
+      Toast.fire({
+        icon: "success",
+        title: `User ${isActive ? "deactivated" : "activated"}  successfully`,
+      });
+      fetchUsers(pagination.currentPage);
+    } catch (error) {
+      Toast.fire({
+        icon: "error",
+        title: "Failed to activate user",
+      });
     }
   };
 
@@ -258,6 +291,34 @@ const Dashboard: React.FC = () => {
     setEditUser(null);
   };
 
+  const openStatusModal = (user: User) => {
+    setStatusUser(user);
+    setPendingStatus(user.isActive ? true : false);
+    setShowStatusModal(true);
+  };
+
+  const closeStatusModal = () => {
+    setShowStatusModal(false);
+    setStatusUser(null);
+    setPendingStatus(null);
+    setStatusLoading(false);
+  };
+
+  const handleStatusChange = (status: boolean) => {
+    setPendingStatus(status);
+  };
+
+  const confirmStatusUpdate = async () => {
+    if (!statusUser || pendingStatus === null) return;
+    setStatusLoading(true);
+    try {
+      await activateUser(statusUser._id, statusUser.isActive); // Your existing API call
+      closeStatusModal();
+    } catch (e) {
+      setStatusLoading(false);
+    }
+  };
+
   const renderPagination = () => (
     <nav className="relative z-0 inline-flex rounded-md shadow-sm -space-x-px">
       <button
@@ -351,13 +412,16 @@ const Dashboard: React.FC = () => {
                     Email
                   </th>
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Status
+                    Working Hours(hh:mm:ss)
                   </th>
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                     Last Active
                   </th>
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Working Hours(hh:mm:ss)
+                    Tracking Status
+                  </th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    Account Status
                   </th>
                   <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
                     Actions
@@ -385,43 +449,6 @@ const Dashboard: React.FC = () => {
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap">
                         {user.email}
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap">
-                        {userTimeEntries.some(
-                          (entry) =>
-                            entry.userId === user._id && entry.outTime === null
-                        ) ? (
-                          <span className="inline-flex items-center px-2 py-1 rounded text-xs font-medium bg-green-100 text-green-500">
-                            <FaCheckCircle className="mr-1" /> Active
-                          </span>
-                        ) : (
-                          <span className="inline-flex items-center px-2 py-1 rounded text-xs font-medium bg-gray-100 text-gray-800">
-                            <FaTimesCircle className="mr-1" /> Inactive
-                          </span>
-                        )}
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap">
-                        {userTimeEntries.filter(
-                          (entry) => entry.userId === user._id
-                        ).length > 0
-                          ? (() => {
-                              const latestEntry = userTimeEntries
-                                .filter((entry) => entry.userId === user._id)
-                                .sort((a, b) => {
-                                  const timeA = a.inTime
-                                    ? new Date(a.inTime).getTime()
-                                    : 0;
-                                  const timeB = b.inTime
-                                    ? new Date(b.inTime).getTime()
-                                    : 0;
-                                  return timeB - timeA;
-                                })[0];
-
-                              return latestEntry?.outTime
-                                ? new Date(latestEntry.outTime).toLocaleString()
-                                : "-";
-                            })()
-                          : "No entries"}
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap">
                         {userTimeEntries.filter(
@@ -457,6 +484,65 @@ const Dashboard: React.FC = () => {
                             })()
                           : 0}
                       </td>
+
+                      <td className="px-6 py-4 whitespace-nowrap">
+                        {userTimeEntries.filter(
+                          (entry) => entry.userId === user._id
+                        ).length > 0
+                          ? (() => {
+                              const latestEntry = userTimeEntries
+                                .filter((entry) => entry.userId === user._id)
+                                .sort((a, b) => {
+                                  const timeA = a.inTime
+                                    ? new Date(a.inTime).getTime()
+                                    : 0;
+                                  const timeB = b.inTime
+                                    ? new Date(b.inTime).getTime()
+                                    : 0;
+                                  return timeB - timeA;
+                                })[0];
+
+                              return latestEntry?.outTime
+                                ? new Date(latestEntry.outTime).toLocaleString()
+                                : "-";
+                            })()
+                          : "No entries"}
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap">
+                        {userTimeEntries.some(
+                          (entry) =>
+                            entry.userId === user._id && entry.outTime === null
+                        ) ? (
+                          <span className="inline-flex items-center px-2 py-1 rounded text-xs font-medium bg-green-100 text-green-500">
+                            <FaCircle className="mr-1" /> Online
+                          </span>
+                        ) : (
+                          <span className="inline-flex items-center px-2 py-1 rounded text-xs font-medium bg-gray-100">
+                            <FaCircle className="mr-1 text-gray-400" /> Offline
+                          </span>
+                        )}
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap cursor-pointer">
+                        <button
+                          onClick={() => openStatusModal(user)}
+                          className={`inline-flex items-center px-2 py-1 rounded text-xs font-medium cursor-pointer ${
+                            user.isActive
+                              ? "bg-green-100 text-green-700"
+                              : "bg-red-200 text-red-600"
+                          }`}
+                        >
+                          {user.isActive ? (
+                            <>
+                              <FaCheckCircle className="mr-1" /> Active
+                            </>
+                          ) : (
+                            <>
+                              <FaTimesCircle className="mr-1" /> Inactive
+                            </>
+                          )}
+                        </button>
+                      </td>
+
                       <td className="px-6 py-4 whitespace-nowrap text-right space-x-2">
                         <button
                           className="p-1 rounded hover:bg-indigo-50 text-indigo-600"
@@ -694,6 +780,119 @@ const Dashboard: React.FC = () => {
             </div>
           </form>
         </div>
+      </Modal>
+
+      <Modal isOpen={showStatusModal} onClose={closeStatusModal}>
+        {statusUser && (
+          <div className="relative bg-white rounded-xl shadow-xl max-w-md w-full mx-4 transform transition-all duration-300">
+            <div className="flex items-center justify-between p-4 border-b border-gray-200">
+              <h3 className="text-xl font-semibold text-gray-800">
+                Manage User Account
+              </h3>
+              <button
+                onClick={closeStatusModal}
+                className="text-gray-400 hover:text-gray-600 transition-colors"
+              >
+                <FaTimesCircle className="text-xl" />
+              </button>
+            </div>
+            <div className="p-6">
+              <div className="flex items-center mb-6">
+                <div className="relative mr-4">
+                  <img
+                    src={`https://ui-avatars.com/api/?name=${encodeURIComponent(
+                      statusUser.fullName
+                    )}`}
+                    alt="User avatar"
+                    className="w-16 h-16 rounded-full border-4 border-gray-200 object-cover shadow-sm"
+                  />
+                  <span
+                    className={`absolute bottom-0 right-0 w-5 h-5 rounded-full border-2 border-white ${
+                      pendingStatus === true ? "bg-green-500" : "bg-red-400"
+                    }`}
+                  ></span>
+                </div>
+                <div>
+                  <h4 className="font-medium text-gray-900">
+                    {statusUser.fullName}
+                  </h4>
+                  <p className="text-gray-600 text-sm">{statusUser.email}</p>
+                  <div
+                    className={`inline-block px-3 py-1 rounded-full text-xs mt-1 font-medium ${
+                      pendingStatus === true
+                        ? "bg-green-100 text-green-800"
+                        : "bg-red-200 text-red-600"
+                    }`}
+                  >
+                    {pendingStatus === true ? "Active" : "Inactive"}
+                  </div>
+                </div>
+              </div>
+              <div className="mb-6">
+                <h5 className="text-sm font-medium text-gray-500 mb-3">
+                  SET ACCOUNT STATUS
+                </h5>
+                <div className="flex space-x-3">
+                  <button
+                    onClick={() => handleStatusChange(true)}
+                    className={`flex-1 border-2 font-medium py-3 px-4 rounded-lg flex items-center justify-center transition-all duration-200 ${
+                      pendingStatus === true
+                        ? "border-green-400 bg-green-50 text-green-700"
+                        : "border-gray-300 bg-white text-gray-700 hover:bg-green-50"
+                    }`}
+                  >
+                    <FaCheckCircle className="mr-2" />
+                    Activate
+                  </button>
+                  <button
+                    onClick={() => handleStatusChange(false)}
+                    className={`flex-1 border-2 font-medium py-3 px-4 rounded-lg flex items-center justify-center transition-all duration-200 ${
+                      pendingStatus === false
+                        ? "border-red-400 bg-red-100 text-red-700"
+                        : "border-gray-300 bg-white text-gray-700 hover:bg-gray-100"
+                    }`}
+                  >
+                    <FaTimesCircle className="mr-2" />
+                    Deactivate
+                  </button>
+                </div>
+              </div>
+              <div className="bg-yellow-50 border-l-4 border-yellow-400 p-4 rounded mb-6">
+                <div className="flex">
+                  <div className="flex-shrink-0">
+                    <FaExclamationCircle className="text-yellow-400" />
+                  </div>
+                  <div className="ml-3">
+                    <p className="text-sm text-yellow-700">
+                      Deactivating an account will restrict user access
+                      immediately. The user won't be able to log in until
+                      reactivated.
+                    </p>
+                  </div>
+                </div>
+              </div>
+            </div>
+            <div className="flex justify-end p-4 border-t border-gray-200 bg-gray-50 rounded-b-xl">
+              <button
+                onClick={closeStatusModal}
+                className="px-4 py-2 text-gray-700 font-medium rounded-lg hover:bg-gray-100 mr-3 transition-colors"
+                disabled={statusLoading}
+              >
+                Cancel
+              </button>
+              <button
+                onClick={confirmStatusUpdate}
+                className="px-4 py-2 bg-blue-600 text-white font-medium rounded-lg hover:bg-blue-700 transition-colors shadow-sm"
+                disabled={
+                  statusLoading ||
+                  pendingStatus === (statusUser.isActive ? true : false)
+                }
+              >
+                {statusLoading ? "Saving..." : "Confirm Changes"}
+              </button>
+            </div>
+          </div>
+        )}
       </Modal>
     </div>
   );

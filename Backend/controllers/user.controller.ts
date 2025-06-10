@@ -76,6 +76,24 @@ export const updateUser = async (
   }
 };
 
+// PUT /api/users/status/:id
+export const activateUser = async (
+  req: Request,
+  res: Response,
+  next: NextFunction
+): Promise<any | void> => {
+  try {
+    const user = await User.findById(req.params.id);
+    if (!user) return res.status(404).json({ message: "User not found." });
+    user.isActive = !user.isActive;
+    const message = `User ${user.isActive ? "activated" : "deactivated"} successfully.`;
+    await user.save();
+    res.status(200).json({ message: message, user });
+  } catch (error) {
+    next(error);
+  }
+};
+
 // DELETE /api/users/:id
 export const deleteUser = async (
   req: Request,

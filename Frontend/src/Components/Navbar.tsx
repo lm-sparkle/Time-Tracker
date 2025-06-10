@@ -24,6 +24,7 @@ const Navbar = () => {
 
   const handleLogout = () => {
     logout();
+    setProfileOpen(false);
   };
 
   // Close profile dropdown on outside click
@@ -174,7 +175,7 @@ const Navbar = () => {
                         >
                           <button
                             onClick={handleLogout}
-                            className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"
+                            className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 w-full text-left cursor-pointer"
                             role="menuitem"
                           >
                             Sign out

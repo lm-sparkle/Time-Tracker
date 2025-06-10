@@ -22,11 +22,18 @@ const LoginForm: React.FC = () => {
       }
 
       await login({ email: loginEmail, password: loginPassword });
-    } catch (error) {
-      Toast.fire({
-        icon: "error",
-        title: "Login failed",
-      });
+    } catch (error: any) {
+      if (error.response?.status === 403) {
+        Toast.fire({
+          icon: "error",
+          title: "Your account is deactivated. Please contact admin.",
+        });
+      } else {
+        Toast.fire({
+          icon: "error",
+          title: "Login failed. Check credentials.",
+        });
+      }
     }
   };
 
