@@ -572,21 +572,21 @@ const Dashboard: React.FC = () => {
                           y: rect.top - 10,
                           content: (
                             <div>
-                              <div className="mb-2 text-sm font-semibold text-gray-800">
+                              <div className="mb-2 text-sm font-bold text-gray-800">
                                 Tracker Status:{" "}
                                 <span className="font-normal">
                                   {trackerStatus}
                                 </span>
                               </div>
-                              <div className="mb-2 text-sm text-gray-700">
+                              <div className="mb-2 text-sm font-bold text-gray-800">
                                 Logged Time:{" "}
-                                <span className="font-semibold">
+                                <span className="font-normal">
                                   {formatTime(totalLoggedSeconds)}
                                 </span>
                               </div>
-                              <div className="mb-2 text-sm text-gray-700">
+                              <div className="mb-2 text-sm font-bold text-gray-800">
                                 Break Time:{" "}
-                                <span className="font-semibold">
+                                <span className="font-normal">
                                   {formatTime(totalBreakSeconds)}
                                 </span>
                               </div>
