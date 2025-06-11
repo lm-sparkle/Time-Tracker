@@ -5,6 +5,8 @@ import { Request, Response } from "express";
 import dotenv from "dotenv";
 dotenv.config();
 
+import { ipRestrict } from "./middlewares/ip.middleware"
+
 import connectDB from "./libs/connectDB";
 import registerRouter from "./routers/register.route";
 import loginRouter from "./routers/login.route";
@@ -44,7 +46,7 @@ app.get("/", (req: Request, res: Response) => {
 app.use("/api", registerRouter);
 app.use("/api", loginRouter);
 app.use("/api/users", userRouter);
-app.use("/api/time", timeRouter);
+app.use("/api/time", ipRestrict, timeRouter);
 app.use("/api/status", statusRouter);
 
 app.listen(PORT, () => {
