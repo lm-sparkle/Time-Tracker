@@ -14,9 +14,9 @@ import {
   FaHamburger,
 } from "react-icons/fa";
 import { useAuth } from "../../Auth/AuthContext";
-import axios from "axios";
 import Modal from "../../Components/Modal";
 import { Toast } from "../../Components/Toast";
+import api from "../../utils/api";
 
 type Status =
   | "not_clocked_in"
@@ -68,7 +68,7 @@ const HomePage: React.FC = () => {
   const modalRef = useRef<HTMLDivElement>(null);
 
   if (user) {
-    localStorage.setItem("userId", user.id);
+    sessionStorage.setItem("userId", user.id);
   }
 
   // UI helpers
@@ -174,11 +174,11 @@ const HomePage: React.FC = () => {
   };
 
   const fetchMailInfo = async () => {
-    const response = await axios.get(
+    const response = await api.get(
       `${import.meta.env.VITE_API_URL}status/mail-info`,
       {
         headers: {
-          Authorization: `Bearer ${localStorage.getItem("token")}`,
+          Authorization: `Bearer ${sessionStorage.getItem("token")}`,
         },
       }
     );
@@ -188,19 +188,19 @@ const HomePage: React.FC = () => {
   const handleClockIn = async () => {
     try {
       if (status === "not_clocked_in" || status === "clocked_out_for_break") {
-        const res = await axios.post(
+        const res = await api.post(
           `${import.meta.env.VITE_API_URL}time/clock-in`,
           {
             userId: user?.id,
           },
           {
             headers: {
-              Authorization: `Bearer ${localStorage.getItem("token")}`,
+              Authorization: `Bearer ${sessionStorage.getItem("token")}`,
             },
           }
         );
         setCurrentEntryId(res.data._id);
-        localStorage.setItem("time_Id", res.data._id);
+        sessionStorage.setItem("time_Id", res.data._id);
         setInTime(new Date(res.data.inTime));
         setStatus(res?.data?.status);
         fetchUserLatestTime();
@@ -213,14 +213,14 @@ const HomePage: React.FC = () => {
 
   const handleClockOut = async () => {
     if (status !== "clocked_in") return;
-    const response = await axios.put(
-      `${import.meta.env.VITE_API_URL}time/clock-out/${localStorage.getItem(
+    const response = await api.put(
+      `${import.meta.env.VITE_API_URL}time/clock-out/${sessionStorage.getItem(
         "time_Id"
       )}`,
       {},
       {
         headers: {
-          Authorization: `Bearer ${localStorage.getItem("token")}`,
+          Authorization: `Bearer ${sessionStorage.getItem("token")}`,
         },
       }
     );
@@ -241,14 +241,14 @@ const HomePage: React.FC = () => {
 
   const fetchUserTimes = async () => {
     const today = new Date().toISOString().split("T")[0];
-    const userId = localStorage.getItem("userId");
+    const userId = sessionStorage.getItem("userId");
 
     try {
-      const response = await axios.get(
+      const response = await api.get(
         `${import.meta.env.VITE_API_URL}time/user/${userId}?date=${today}`,
         {
           headers: {
-            Authorization: `Bearer ${localStorage.getItem("token")}`,
+            Authorization: `Bearer ${sessionStorage.getItem("token")}`,
           },
         }
       );
@@ -351,18 +351,18 @@ const HomePage: React.FC = () => {
   const fetchUserLatestTime = async () => {
     try {
       const today = new Date().toISOString().split("T")[0];
-      const response = await axios.get(
-        `${import.meta.env.VITE_API_URL}time/user/latest/${localStorage.getItem(
+      const response = await api.get(
+        `${import.meta.env.VITE_API_URL}time/user/latest/${sessionStorage.getItem(
           "userId"
         )}?date=${today}`,
         {
           headers: {
-            Authorization: `Bearer ${localStorage.getItem("token")}`,
+            Authorization: `Bearer ${sessionStorage.getItem("token")}`,
           },
         }
       );
       setUserLatestTime(response.data);
-      localStorage.setItem("time_Id", response.data?.[0]?._id);
+      sessionStorage.setItem("time_Id", response.data?.[0]?._id);
       setStatus(response.data?.[0]?.status || "not_clocked_in");
     } catch (err) {
       console.error(err);
@@ -379,9 +379,9 @@ const HomePage: React.FC = () => {
     try {
       if (!(status === "clocked_in" || status === "clocked_out_for_break"))
         return;
-      const response = await axios.put(
+      const response = await api.put(
         `${import.meta.env.VITE_API_URL
-        }time/final-clock-out/${localStorage.getItem("time_Id")}`,
+        }time/final-clock-out/${sessionStorage.getItem("time_Id")}`,
         {
           userId: user?.id,
           userName: user?.fullName,
@@ -393,7 +393,7 @@ const HomePage: React.FC = () => {
         },
         {
           headers: {
-            Authorization: `Bearer ${localStorage.getItem("token")}`,
+            Authorization: `Bearer ${sessionStorage.getItem("token")}`,
           },
         }
       );
@@ -401,7 +401,7 @@ const HomePage: React.FC = () => {
         icon: "success",
         title: "Status update submitted successfully",
       });
-      localStorage.removeItem("time_Id");
+      sessionStorage.removeItem("time_Id");
       setStatus(response?.data?.status); // Should be "clocked_out"
       setInTime(null);
       setOutTime(null);

@@ -19,7 +19,7 @@ app.use(express.json());
 
 app.use(
   cors({
-    origin: ["http://192.168.1.27:5173", "http://localhost:5173", "http://localhost:4173", "https://time-tracker-sparkle.vercel.app", "https://laughing-couscous-x54vr5jxq4x6c9g6r-5173.app.github.dev"],
+    origin: ["http://192.168.1.27:5173", "http://localhost:5173", "https://time-tracker-sparkle.vercel.app"],
     methods: "GET,POST,PUT,DELETE",
     allowedHeaders: ["Content-Type", "Authorization"],
   })
@@ -43,11 +43,11 @@ app.get("/", (req: Request, res: Response) => {
     "Welcome to the Time Tracker API Server! Your backend is running smoothly. Access the API endpoints at /api."
   );
 });
-app.use("/api", registerRouter);
-app.use("/api", loginRouter);
-app.use("/api/users", userRouter);
+app.use("/api", ipRestrict, registerRouter);
+app.use("/api", ipRestrict, loginRouter);
+app.use("/api/users", ipRestrict, userRouter);
 app.use("/api/time", ipRestrict, timeRouter);
-app.use("/api/status", statusRouter);
+app.use("/api/status", ipRestrict, statusRouter);
 
 app.listen(PORT, () => {
   console.log(`Server is running on port ${PORT}`);

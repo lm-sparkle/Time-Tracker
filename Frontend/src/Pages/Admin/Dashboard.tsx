@@ -15,10 +15,10 @@ import {
   FaExclamationCircle,
   FaCheckCircle,
 } from "react-icons/fa";
-import axios from "axios";
 import Modal from "../../Components/Modal";
 import { Toast } from "../../Components/Toast";
 import Swal from "sweetalert2";
+import api from "../../utils/api";
 
 type User = {
   _id: string;
@@ -40,6 +40,7 @@ const Dashboard: React.FC = () => {
   const [userTimeEntries, setUserTimeEntries] = useState<
     {
       userId: string;
+      status: string;
       inTime: Date | null;
       outTime: Date | null;
       workingHours: String;
@@ -70,18 +71,30 @@ const Dashboard: React.FC = () => {
     role: "user" as "user" | "admin",
   });
 
+  const [tooltip, setTooltip] = useState<{
+    visible: boolean;
+    x: number;
+    y: number;
+    content: React.ReactNode;
+  }>({
+    visible: false,
+    x: 0,
+    y: 0,
+    content: null,
+  });
+
   const API_URL = import.meta.env.VITE_API_URL as string;
 
   const fetchUsers = async (page = 1) => {
     setLoading(true);
     try {
-      const response = await axios.get(`${API_URL}users`, {
+      const response = await api.get(`${API_URL}users`, {
         params: {
           page,
           limit: 10,
         },
         headers: {
-          Authorization: `Bearer ${localStorage.getItem("token")}`,
+          Authorization: `Bearer ${sessionStorage.getItem("token")}`,
         },
       });
       setUsers(response.data.users);
@@ -103,11 +116,11 @@ const Dashboard: React.FC = () => {
   const fetchUserTimeEntries = async () => {
     const today = new Date().toISOString().split("T")[0];
     try {
-      const response = await axios.get(
+      const response = await api.get(
         `${API_URL}time/userTime?date=${today}`,
         {
           headers: {
-            Authorization: `Bearer ${localStorage.getItem("token")}`,
+            Authorization: `Bearer ${sessionStorage.getItem("token")}`,
           },
         }
       );
@@ -124,12 +137,12 @@ const Dashboard: React.FC = () => {
 
   const activateUser = async (userId: string, isActive: boolean) => {
     try {
-      await axios.put(
+      await api.put(
         `${API_URL}users/status/${userId}`,
         {},
         {
           headers: {
-            Authorization: `Bearer ${localStorage.getItem("token")}`,
+            Authorization: `Bearer ${sessionStorage.getItem("token")}`,
           },
         }
       );
@@ -167,7 +180,7 @@ const Dashboard: React.FC = () => {
       return;
     }
     try {
-      await axios.post(
+      await api.post(
         `${API_URL}register`,
         {
           firstName: form.firstName,
@@ -179,7 +192,7 @@ const Dashboard: React.FC = () => {
         },
         {
           headers: {
-            Authorization: `Bearer ${localStorage.getItem("token")}`,
+            Authorization: `Bearer ${sessionStorage.getItem("token")}`,
           },
         }
       );
@@ -201,7 +214,7 @@ const Dashboard: React.FC = () => {
     e.preventDefault();
     if (!editUser) return;
     try {
-      await axios.put(
+      await api.put(
         `${API_URL}users/${editUser._id}`,
         {
           firstName: form.firstName,
@@ -210,7 +223,7 @@ const Dashboard: React.FC = () => {
         },
         {
           headers: {
-            Authorization: `Bearer ${localStorage.getItem("token")}`,
+            Authorization: `Bearer ${sessionStorage.getItem("token")}`,
           },
         }
       );
@@ -239,9 +252,9 @@ const Dashboard: React.FC = () => {
     }).then(async (result) => {
       if (result.isConfirmed) {
         try {
-          await axios.delete(`${API_URL}users/${userId}`, {
+          await api.delete(`${API_URL}users/${userId}`, {
             headers: {
-              Authorization: `Bearer ${localStorage.getItem("token")}`,
+              Authorization: `Bearer ${sessionStorage.getItem("token")}`,
             },
           });
           Toast.fire({
@@ -443,7 +456,148 @@ const Dashboard: React.FC = () => {
                   </tr>
                 ) : (
                   users.map((user) => (
-                    <tr key={user._id}>
+                    <tr
+                      key={user._id}
+                      className="hover:bg-gray-50 cursor-pointer"
+                      onMouseEnter={(e) => {
+                        const rect = (
+                          e.currentTarget as HTMLElement
+                        ).getBoundingClientRect();
+
+                        const userEntries = userTimeEntries
+                          .filter((entry) => entry.userId === user._id)
+                          .sort((a, b) => {
+                            const timeA = a.inTime
+                              ? new Date(a.inTime).getTime()
+                              : 0;
+                            const timeB = b.inTime
+                              ? new Date(b.inTime).getTime()
+                              : 0;
+                            return timeA - timeB;
+                          });
+
+                        let trackerStatus = "Clocked Out";
+                        if (userEntries.length > 0) {
+                          const latest = userEntries[userEntries.length - 1];
+                          if (latest.status === "clocked_in")
+                            trackerStatus = "Clocked In";
+                          else if (latest.status === "clocked_out_for_break")
+                            trackerStatus = "On Break";
+                        }
+
+                        let totalLoggedSeconds = 0;
+                        userEntries.forEach((entry, _i) => {
+                          const inTime = entry.inTime
+                            ? new Date(entry.inTime).getTime()
+                            : null;
+                          const outTime = entry.outTime
+                            ? new Date(entry.outTime).getTime()
+                            : null;
+                          if (inTime && outTime) {
+                            totalLoggedSeconds += Math.floor(
+                              (outTime - inTime) / 1000
+                            );
+                          }
+                        });
+
+                        if (
+                          userEntries.length > 0 &&
+                          userEntries[userEntries.length - 1].status ===
+                            "clocked_in" &&
+                          userEntries[userEntries.length - 1].inTime &&
+                          !userEntries[userEntries.length - 1].outTime
+                        ) {
+                          const lastEntry =
+                            userEntries.length > 0
+                              ? userEntries[userEntries.length - 1]
+                              : undefined;
+                          const lastIn =
+                            lastEntry && lastEntry.inTime
+                              ? new Date(lastEntry.inTime).getTime()
+                              : 0;
+
+                          totalLoggedSeconds += Math.floor(
+                            (Date.now() - lastIn) / 1000
+                          );
+                        }
+
+                        let totalBreakSeconds = 0;
+                        for (let i = 1; i < userEntries.length; i++) {
+                          const prev = userEntries[i - 1];
+                          const curr = userEntries[i];
+                          if (prev.outTime && curr.inTime) {
+                            const breakStart = new Date(prev.outTime).getTime();
+                            const breakEnd = new Date(curr.inTime).getTime();
+                            if (breakEnd > breakStart) {
+                              totalBreakSeconds += Math.floor(
+                                (breakEnd - breakStart) / 1000
+                              );
+                            }
+                          }
+                        }
+                        if (
+                          userEntries.length > 0 &&
+                          userEntries[userEntries.length - 1].status ===
+                            "clocked_out_for_break" &&
+                          userEntries[userEntries.length - 1].outTime
+                        ) {
+                          const lastOut = userEntries[userEntries.length - 1]
+                            .outTime
+                            ? new Date(
+                                userEntries[userEntries.length - 1].outTime ||
+                                  ""
+                              ).getTime()
+                            : 0;
+                          totalBreakSeconds += Math.floor(
+                            (Date.now() - lastOut) / 1000
+                          );
+                        }
+
+                        const formatTime = (seconds: number) => {
+                          const h = Math.floor(seconds / 3600)
+                            .toString()
+                            .padStart(2, "0");
+                          const m = Math.floor((seconds % 3600) / 60)
+                            .toString()
+                            .padStart(2, "0");
+                          const s = Math.floor(seconds % 60)
+                            .toString()
+                            .padStart(2, "0");
+                          return `${h}:${m}:${s}`;
+                        };
+
+                        setTooltip({
+                          visible: true,
+                          x: rect.left + rect.width / 2,
+                          y: rect.top - 10,
+                          content: (
+                            <div>
+                              <div className="mb-2 text-sm font-semibold text-gray-800">
+                                Tracker Status:{" "}
+                                <span className="font-normal">
+                                  {trackerStatus}
+                                </span>
+                              </div>
+                              <div className="mb-2 text-sm text-gray-700">
+                                Logged Time:{" "}
+                                <span className="font-semibold">
+                                  {formatTime(totalLoggedSeconds)}
+                                </span>
+                              </div>
+                              <div className="mb-2 text-sm text-gray-700">
+                                Break Time:{" "}
+                                <span className="font-semibold">
+                                  {formatTime(totalBreakSeconds)}
+                                </span>
+                              </div>
+                            </div>
+                          ),
+                        });
+                      }}
+                      onMouseLeave={() =>
+                        setTooltip((prev) => ({ ...prev, visible: false }))
+                      }
+                    >
                       <td className="px-6 py-4 whitespace-nowrap">
                         {user.fullName}
                       </td>
@@ -566,6 +720,19 @@ const Dashboard: React.FC = () => {
                 )}
               </tbody>
             </table>
+            {tooltip.visible && (
+              <div
+                className="fixed z-50 bg-white p-3 rounded-lg shadow-lg min-w-[220px] pointer-events-none"
+                style={{
+                  left: tooltip.x,
+                  top: tooltip.y,
+                  opacity: tooltip.visible ? 1 : 0,
+                  transition: "opacity 0.2s",
+                }}
+              >
+                {tooltip.content}
+              </div>
+            )}
           </div>
           {/* Pagination */}
           <div className="bg-white px-4 py-3 flex items-center justify-between border-t border-gray-200 sm:px-6">

@@ -11,7 +11,7 @@ import { useAuth } from "../Auth/AuthContext";
 
 const Navbar = () => {
   const location = useLocation();
-  const token = localStorage.getItem("token");
+  const token = sessionStorage.getItem("token");
   const { user, logout } = useAuth();
 
   const [profileOpen, setProfileOpen] = useState(false);

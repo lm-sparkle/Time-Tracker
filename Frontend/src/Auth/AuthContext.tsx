@@ -6,8 +6,8 @@ import {
   type ReactNode,
 } from "react";
 import { useNavigate } from "react-router-dom";
-import axios from "axios";
 import { Toast } from "../Components/Toast";
+import api from "../utils/api";
 
 type UserRole = "user" | "admin";
 type User = {
@@ -35,8 +35,8 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const navigate = useNavigate();
 
   useEffect(() => {
-    const savedUser = localStorage.getItem("user");
-    const savedToken = localStorage.getItem("token");
+    const savedUser = sessionStorage.getItem("user");
+    const savedToken = sessionStorage.getItem("token");
 
     if (savedUser && savedToken) {
       setUser(JSON.parse(savedUser));
@@ -51,7 +51,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     const urlParams = new URLSearchParams(window.location.search);
     const adminKey = urlParams.get("adminKey");
   
-    const response = await axios.post(
+    const response = await api.post(
       `${import.meta.env.VITE_API_URL}login${adminKey ? `?adminKey=${adminKey}` : ""}`,
       credentials
     );
@@ -61,8 +61,9 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     if (response.status && data.token && data.user) {
       setUser(data.user);
       setToken(data.token);
-      localStorage.setItem("token", data.token);
-      localStorage.setItem("user", JSON.stringify(data.user));
+      sessionStorage.setItem("token", data.token);
+      sessionStorage.setItem("user", JSON.stringify(data.user));
+      sessionStorage.setItem("lastVisitDate",new Date().toISOString().split("T")[0])
       Toast.fire({
         icon: "success",
         title: "Login successful",
@@ -86,10 +87,10 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       icon: "success",
       title: "Logout successful",
     });
-    localStorage.removeItem("token");
-    localStorage.removeItem("user");
-    localStorage.removeItem("userId");
-    localStorage.removeItem("time_Id");
+    sessionStorage.removeItem("token");
+    sessionStorage.removeItem("user");
+    sessionStorage.removeItem("userId");
+    sessionStorage.removeItem("time_Id");
     navigate("/login");
   };
 
