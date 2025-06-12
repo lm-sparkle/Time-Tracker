@@ -23,7 +23,15 @@ const LoginForm: React.FC = () => {
 
       await login({ email: loginEmail, password: loginPassword });
     } catch (error: any) {
-      if (error.response?.status === 403) {
+      if (
+        error.response?.status === 403 &&
+        error.response?.data === "Access denied: Your IP is not allowed."
+      ) {
+        Toast.fire({
+          icon: "error",
+          title: "Access denied: Your IP is not allowed.",
+        });
+      } else if (error.response?.status === 403) {
         Toast.fire({
           icon: "error",
           title: "Your account is deactivated. Please contact admin.",
