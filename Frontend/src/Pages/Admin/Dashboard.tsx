@@ -355,11 +355,10 @@ const Dashboard: React.FC = () => {
               currentPage: i + 1,
             }))
           }
-          className={`relative inline-flex items-center px-4 py-2 border text-sm font-medium ${
-            pagination.currentPage === i + 1
+          className={`relative inline-flex items-center px-4 py-2 border text-sm font-medium ${pagination.currentPage === i + 1
               ? "z-10 bg-indigo-50 border-indigo-500 text-indigo-600"
               : "bg-white border-gray-300 text-gray-500 hover:bg-gray-50"
-          }`}
+            }`}
         >
           {i + 1}
         </button>
@@ -503,7 +502,7 @@ const Dashboard: React.FC = () => {
                         if (
                           userEntries.length > 0 &&
                           userEntries[userEntries.length - 1].status ===
-                            "clocked_in" &&
+                          "clocked_in" &&
                           userEntries[userEntries.length - 1].inTime &&
                           !userEntries[userEntries.length - 1].outTime
                         ) {
@@ -538,15 +537,15 @@ const Dashboard: React.FC = () => {
                         if (
                           userEntries.length > 0 &&
                           userEntries[userEntries.length - 1].status ===
-                            "clocked_out_for_break" &&
+                          "clocked_out_for_break" &&
                           userEntries[userEntries.length - 1].outTime
                         ) {
                           const lastOut = userEntries[userEntries.length - 1]
                             .outTime
                             ? new Date(
-                                userEntries[userEntries.length - 1].outTime ||
-                                  ""
-                              ).getTime()
+                              userEntries[userEntries.length - 1].outTime ||
+                              ""
+                            ).getTime()
                             : 0;
                           totalBreakSeconds += Math.floor(
                             (Date.now() - lastOut) / 1000
@@ -609,33 +608,33 @@ const Dashboard: React.FC = () => {
                           (entry) => entry.userId === user._id
                         ).length > 0
                           ? (() => {
-                              const totalWorkedMs = userTimeEntries
-                                .filter((entry) => entry.userId === user._id)
-                                .reduce((total, entry) => {
-                                  const entryDuration =
-                                    entry.outTime && entry.inTime
-                                      ? new Date(entry.outTime).getTime() -
-                                        new Date(entry.inTime).getTime()
-                                      : 0;
-                                  return total + entryDuration;
-                                }, 0);
+                            const totalWorkedMs = userTimeEntries
+                              .filter((entry) => entry.userId === user._id)
+                              .reduce((total, entry) => {
+                                const entryDuration =
+                                  entry.outTime && entry.inTime
+                                    ? new Date(entry.outTime).getTime() -
+                                    new Date(entry.inTime).getTime()
+                                    : 0;
+                                return total + entryDuration;
+                              }, 0);
 
-                              const totalSeconds = Math.floor(
-                                totalWorkedMs / 1000
-                              );
-                              const hours = Math.floor(totalSeconds / 3600);
-                              const minutes = Math.floor(
-                                (totalSeconds % 3600) / 60
-                              );
-                              const seconds = totalSeconds % 60;
+                            const totalSeconds = Math.floor(
+                              totalWorkedMs / 1000
+                            );
+                            const hours = Math.floor(totalSeconds / 3600);
+                            const minutes = Math.floor(
+                              (totalSeconds % 3600) / 60
+                            );
+                            const seconds = totalSeconds % 60;
 
-                              return `${String(hours).padStart(
-                                2,
-                                "0"
-                              )}:${String(minutes).padStart(2, "0")}:${String(
-                                seconds
-                              ).padStart(2, "0")}`;
-                            })()
+                            return `${String(hours).padStart(
+                              2,
+                              "0"
+                            )}:${String(minutes).padStart(2, "0")}:${String(
+                              seconds
+                            ).padStart(2, "0")}`;
+                          })()
                           : 0}
                       </td>
 
@@ -644,22 +643,22 @@ const Dashboard: React.FC = () => {
                           (entry) => entry.userId === user._id
                         ).length > 0
                           ? (() => {
-                              const latestEntry = userTimeEntries
-                                .filter((entry) => entry.userId === user._id)
-                                .sort((a, b) => {
-                                  const timeA = a.inTime
-                                    ? new Date(a.inTime).getTime()
-                                    : 0;
-                                  const timeB = b.inTime
-                                    ? new Date(b.inTime).getTime()
-                                    : 0;
-                                  return timeB - timeA;
-                                })[0];
+                            const latestEntry = userTimeEntries
+                              .filter((entry) => entry.userId === user._id)
+                              .sort((a, b) => {
+                                const timeA = a.inTime
+                                  ? new Date(a.inTime).getTime()
+                                  : 0;
+                                const timeB = b.inTime
+                                  ? new Date(b.inTime).getTime()
+                                  : 0;
+                                return timeB - timeA;
+                              })[0];
 
-                              return latestEntry?.outTime
-                                ? new Date(latestEntry.outTime).toLocaleString()
-                                : "-";
-                            })()
+                            return latestEntry?.outTime
+                              ? new Date(latestEntry.outTime).toLocaleString()
+                              : "-";
+                          })()
                           : "No entries"}
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap">
@@ -679,11 +678,10 @@ const Dashboard: React.FC = () => {
                       <td className="px-6 py-4 whitespace-nowrap cursor-pointer">
                         <button
                           onClick={() => openStatusModal(user)}
-                          className={`inline-flex items-center px-2 py-1 rounded text-xs font-medium cursor-pointer ${
-                            user.isActive
+                          className={`inline-flex items-center px-2 py-1 rounded text-xs font-medium cursor-pointer ${user.isActive
                               ? "bg-green-100 text-green-700"
                               : "bg-red-200 text-red-600"
-                          }`}
+                            }`}
                         >
                           {user.isActive ? (
                             <>
@@ -915,21 +913,6 @@ const Dashboard: React.FC = () => {
                 required
               />
             </div>
-            <div>
-              <label className="block text-sm font-medium text-gray-700">
-                Role
-              </label>
-              <select
-                name="role"
-                value={form.role}
-                onChange={handleFormChange}
-                className="mt-1 block w-full border-gray-300 border rounded-md focus:outline-none focus:ring-4 focus:ring-indigo-700 p-2"
-                required
-              >
-                <option value="user">User</option>
-                <option value="admin">Admin</option>
-              </select>
-            </div>
             <div className="flex justify-end space-x-2 mt-4">
               <button
                 type="submit"
@@ -974,9 +957,8 @@ const Dashboard: React.FC = () => {
                     className="w-16 h-16 rounded-full border-4 border-gray-200 object-cover shadow-sm"
                   />
                   <span
-                    className={`absolute bottom-0 right-0 w-5 h-5 rounded-full border-2 border-white ${
-                      pendingStatus === true ? "bg-green-500" : "bg-red-400"
-                    }`}
+                    className={`absolute bottom-0 right-0 w-5 h-5 rounded-full border-2 border-white ${pendingStatus === true ? "bg-green-500" : "bg-red-400"
+                      }`}
                   ></span>
                 </div>
                 <div>
@@ -985,11 +967,10 @@ const Dashboard: React.FC = () => {
                   </h4>
                   <p className="text-gray-600 text-sm">{statusUser.email}</p>
                   <div
-                    className={`inline-block px-3 py-1 rounded-full text-xs mt-1 font-medium ${
-                      pendingStatus === true
+                    className={`inline-block px-3 py-1 rounded-full text-xs mt-1 font-medium ${pendingStatus === true
                         ? "bg-green-100 text-green-800"
                         : "bg-red-200 text-red-600"
-                    }`}
+                      }`}
                   >
                     {pendingStatus === true ? "Active" : "Inactive"}
                   </div>
@@ -1002,22 +983,20 @@ const Dashboard: React.FC = () => {
                 <div className="flex space-x-3">
                   <button
                     onClick={() => handleStatusChange(true)}
-                    className={`flex-1 border-2 font-medium py-3 px-4 rounded-lg flex items-center justify-center transition-all duration-200 ${
-                      pendingStatus === true
+                    className={`flex-1 border-2 font-medium py-3 px-4 rounded-lg flex items-center justify-center transition-all duration-200 ${pendingStatus === true
                         ? "border-green-400 bg-green-50 text-green-700"
                         : "border-gray-300 bg-white text-gray-700 hover:bg-green-50"
-                    }`}
+                      }`}
                   >
                     <FaCheckCircle className="mr-2" />
                     Activate
                   </button>
                   <button
                     onClick={() => handleStatusChange(false)}
-                    className={`flex-1 border-2 font-medium py-3 px-4 rounded-lg flex items-center justify-center transition-all duration-200 ${
-                      pendingStatus === false
+                    className={`flex-1 border-2 font-medium py-3 px-4 rounded-lg flex items-center justify-center transition-all duration-200 ${pendingStatus === false
                         ? "border-red-400 bg-red-100 text-red-700"
                         : "border-gray-300 bg-white text-gray-700 hover:bg-gray-100"
-                    }`}
+                      }`}
                   >
                     <FaTimesCircle className="mr-2" />
                     Deactivate
