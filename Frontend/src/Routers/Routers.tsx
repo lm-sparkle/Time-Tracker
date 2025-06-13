@@ -27,7 +27,7 @@ const Routers = () => {
           }
         />
         <Route
-          path="/admin/*"
+          path="/admin/dashboard"
           element={
             <ProtectedRoute allowedRoles={["admin"]}>
               <Dashboard />
@@ -35,7 +35,7 @@ const Routers = () => {
           }
         />
         <Route
-          path="/dashboard/*"
+          path="/dashboard"
           element={
             <ProtectedRoute allowedRoles={["user"]}>
               <HomePage />
