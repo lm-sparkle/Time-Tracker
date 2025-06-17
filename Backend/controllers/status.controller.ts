@@ -51,7 +51,7 @@ export const sendStatusUpdate = async (
       .sort({ inTime: -1 })
 
       const userOutTime = userEntries[0].outTime 
-        ? new Date(userEntries[0].outTime).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' }) 
+        ? new Date(userEntries[0].outTime).toLocaleTimeString([], {   timeZone: 'Asia/Kolkata',  hour: '2-digit', minute: '2-digit', second: '2-digit' }) 
         : 'N/A';
       
     console.log(userOutTime);
