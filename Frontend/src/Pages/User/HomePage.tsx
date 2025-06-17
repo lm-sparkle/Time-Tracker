@@ -55,6 +55,7 @@ const HomePage: React.FC = () => {
   const [clockInCount, setClockInCount] = useState(0);
   const [clockOutCount, setClockOutCount] = useState(0);
   const [userInTime, setUserInTime] = useState<string>("");
+  // const [userOutTime, setUserOutTime] = useState<string>("");
 
   const breakTimerRef = useRef<NodeJS.Timeout | null>(null);
   const timerRef = useRef<NodeJS.Timeout | null>(null);
@@ -104,15 +105,14 @@ const HomePage: React.FC = () => {
 
   useEffect(() => {
     function updateBreakTime() {
-      if (
-        status === "clocked_out_for_break" &&
-        userLatestTime[0]?.outTime
-      ) {
+      if (status === "clocked_out_for_break" && userLatestTime[0]?.outTime) {
         const outTimeDate = new Date(userLatestTime[0].outTime);
-        setCurrentBreakTime(Math.floor((Date.now() - outTimeDate.getTime()) / 1000));
+        setCurrentBreakTime(
+          Math.floor((Date.now() - outTimeDate.getTime()) / 1000)
+        );
       }
     }
-  
+
     if (status === "clocked_out_for_break" && userLatestTime[0]?.outTime) {
       updateBreakTime();
       breakTimerRef.current = setInterval(updateBreakTime, 1000);
@@ -120,7 +120,7 @@ const HomePage: React.FC = () => {
       setCurrentBreakTime(0);
       if (breakTimerRef.current) clearInterval(breakTimerRef.current);
     }
-  
+
     return () => {
       if (breakTimerRef.current) clearInterval(breakTimerRef.current);
     };
@@ -130,10 +130,12 @@ const HomePage: React.FC = () => {
     function updateTotalSeconds() {
       if (status === "clocked_in" && userLatestTime[0]?.inTime) {
         const inTimeDate = new Date(userLatestTime[0].inTime);
-        setTotalSecondsToday(Math.floor((Date.now() - inTimeDate.getTime()) / 1000));
+        setTotalSecondsToday(
+          Math.floor((Date.now() - inTimeDate.getTime()) / 1000)
+        );
       }
     }
-  
+
     if (status === "clocked_in" && userLatestTime[0]?.inTime) {
       updateTotalSeconds();
       timerRef.current = setInterval(updateTotalSeconds, 1000);
@@ -144,13 +146,15 @@ const HomePage: React.FC = () => {
     ) {
       const inTimeDate = new Date(userLatestTime[0].inTime);
       const outTimeDate = new Date(userLatestTime[0].outTime);
-      setTotalSecondsToday(Math.floor((outTimeDate.getTime() - inTimeDate.getTime()) / 1000));
+      setTotalSecondsToday(
+        Math.floor((outTimeDate.getTime() - inTimeDate.getTime()) / 1000)
+      );
       if (timerRef.current) clearInterval(timerRef.current);
     } else {
       setTotalSecondsToday(0);
       if (timerRef.current) clearInterval(timerRef.current);
     }
-  
+
     return () => {
       if (timerRef.current) clearInterval(timerRef.current);
     };
@@ -161,6 +165,13 @@ const HomePage: React.FC = () => {
     setIsModalOpen(true);
     setShowConfirmModal(false);
     fetchMailInfo();
+    // setUserOutTime(
+    //   new Date().toLocaleTimeString([], {
+    //     hour: "2-digit",
+    //     minute: "2-digit",
+    //     second: "2-digit",
+    //   })
+    // );
   };
   const closeModals = () => {
     setIsModalOpen(false);
@@ -230,16 +241,17 @@ const HomePage: React.FC = () => {
     const [h, m, s] = timeStr.split(":").map(Number);
     return h * 3600 + m * 60 + s;
   };
-  
+
   const handleFinalClockOut = async () => {
     let workedSeconds = 0;
     if (status === "clocked_in") {
-      workedSeconds = timeToSeconds(totalWorkingTime) + totalSecondsToday; 
+      workedSeconds = timeToSeconds(totalWorkingTime) + totalSecondsToday;
     } else {
       workedSeconds = timeToSeconds(totalWorkingTime);
     }
-  
-    if (workedSeconds >= 28800) { // 8 hours = 28800 seconds
+
+    if (workedSeconds >= 28800) {
+      // 8 hours = 28800 seconds
       setIsModalOpen(true);
       fetchMailInfo();
     } else {
@@ -293,6 +305,14 @@ const HomePage: React.FC = () => {
           }
         );
 
+        // const userOutTime =
+        //   latestEntry.status === "clocked_out"
+        //     ? new Date(latestEntry.outTime).toLocaleTimeString([], {
+        //         hour: "2-digit",
+        //         minute: "2-digit",
+        //         second: "2-digit",
+        //       })
+        //     : "";
 
         const now = new Date();
         const outTime = new Date(latestEntry.outTime);
@@ -303,6 +323,9 @@ const HomePage: React.FC = () => {
         setCurrentBreakTime(diffInSec);
 
         setUserInTime(userInTime);
+        // console.log("while setting userOutTime", userOutTime);
+
+        // setUserOutTime(userOutTime);
       }
       setUserTimes(data);
       setClockInCount(
@@ -317,8 +340,8 @@ const HomePage: React.FC = () => {
       const timeToSeconds = (timeStr: {
         split: (arg0: string) => {
           (): any;
-          new (): any;
-          map: { (arg0: NumberConstructor): [any, any, any]; new (): any };
+          new(): any;
+          map: { (arg0: NumberConstructor): [any, any, any]; new(): any };
         };
       }) => {
         const [h, m, s] = timeStr.split(":").map(Number);
@@ -351,9 +374,8 @@ const HomePage: React.FC = () => {
     try {
       const today = new Date().toISOString().split("T")[0];
       const response = await api.get(
-        `${import.meta.env.VITE_API_URL}time/user/latest/${sessionStorage.getItem(
-          "userId"
-        )}?date=${today}`,
+        `${import.meta.env.VITE_API_URL
+        }time/user/latest/${sessionStorage.getItem("userId")}?date=${today}`,
         {
           headers: {
             Authorization: `Bearer ${sessionStorage.getItem("token")}`,
@@ -379,8 +401,7 @@ const HomePage: React.FC = () => {
       if (!(status === "clocked_in" || status === "clocked_out_for_break"))
         return;
       const response = await api.put(
-        `${
-          import.meta.env.VITE_API_URL
+        `${import.meta.env.VITE_API_URL
         }time/final-clock-out/${sessionStorage.getItem("time_Id")}`,
         {
           userId: user?.id,
@@ -388,6 +409,7 @@ const HomePage: React.FC = () => {
           userMail: user?.email,
           message: message,
           inTime: userInTime,
+          // outTime: userOutTime,
           totalBreakTime: totalBreakTime,
         },
         {
@@ -464,12 +486,12 @@ const HomePage: React.FC = () => {
                       <div className="text-2xl font-semibold text-gray-900">
                         {status === "clocked_in"
                           ? formatTime(
-                              (totalWorkingTime
-                                ? totalWorkingTime
-                                    .split(":")
-                                    .reduce((acc, time) => 60 * acc + +time, 0)
-                                : 0) + totalSecondsToday
-                            )
+                            (totalWorkingTime
+                              ? totalWorkingTime
+                                .split(":")
+                                .reduce((acc, time) => 60 * acc + +time, 0)
+                              : 0) + totalSecondsToday
+                          )
                           : totalWorkingTime || "00:00:00"}
                       </div>
                     </dd>
@@ -512,12 +534,11 @@ const HomePage: React.FC = () => {
                   status === "clocked_out_for_break"
                 )
               }
-              className={`time-card bg-white overflow-hidden shadow rounded-lg text-left ${
-                status === "not_clocked_in" ||
-                status === "clocked_out_for_break"
+              className={`time-card bg-white overflow-hidden shadow rounded-lg text-left ${status === "not_clocked_in" ||
+                  status === "clocked_out_for_break"
                   ? "cursor-pointer hover:shadow-lg transition-shadow"
                   : "opacity-50 cursor-not-allowed"
-              }`}
+                }`}
             >
               <div className="px-4 py-5 sm:p-6 text-center">
                 <div className="mx-auto flex-shrink-0 flex items-center justify-center h-12 w-12 rounded-full bg-green-100">
@@ -545,11 +566,10 @@ const HomePage: React.FC = () => {
             <button
               onClick={handleClockOut}
               disabled={status !== "clocked_in"}
-              className={`time-card bg-white overflow-hidden shadow rounded-lg text-left ${
-                status === "clocked_in"
+              className={`time-card bg-white overflow-hidden shadow rounded-lg text-left ${status === "clocked_in"
                   ? "cursor-pointer hover:shadow-lg transition-shadow"
                   : "opacity-50 cursor-not-allowed"
-              }`}
+                }`}
             >
               <div className="px-4 py-5 sm:p-6 text-center">
                 <div className="mx-auto flex-shrink-0 flex items-center justify-center h-12 w-12 rounded-full bg-yellow-100">
@@ -579,11 +599,10 @@ const HomePage: React.FC = () => {
               disabled={
                 !(status === "clocked_in" || status === "clocked_out_for_break")
               }
-              className={`time-card bg-white overflow-hidden shadow rounded-lg text-left ${
-                status === "clocked_in" || status === "clocked_out_for_break"
+              className={`time-card bg-white overflow-hidden shadow rounded-lg text-left ${status === "clocked_in" || status === "clocked_out_for_break"
                   ? "cursor-pointer hover:shadow-lg transition-shadow"
                   : "opacity-50 cursor-not-allowed"
-              }`}
+                }`}
             >
               <div className="px-4 py-5 sm:p-6 text-center">
                 <div className="mx-auto flex-shrink-0 flex items-center justify-center h-12 w-12 rounded-full bg-red-100">
@@ -598,8 +617,8 @@ const HomePage: React.FC = () => {
                     <>
                       {userLatestTime[0]?.outTime
                         ? new Date(
-                            userLatestTime[0]?.outTime
-                          ).toLocaleTimeString()
+                          userLatestTime[0]?.outTime
+                        ).toLocaleTimeString()
                         : "--:--:--"}
                     </>
                   ) : (
@@ -656,13 +675,13 @@ const HomePage: React.FC = () => {
                                 <p className="font-medium">
                                   {event.inTime
                                     ? new Date(event.inTime).toLocaleTimeString(
-                                        [],
-                                        {
-                                          hour: "2-digit",
-                                          minute: "2-digit",
-                                          second: "2-digit",
-                                        }
-                                      )
+                                      [],
+                                      {
+                                        hour: "2-digit",
+                                        minute: "2-digit",
+                                        second: "2-digit",
+                                      }
+                                    )
                                     : "--:--:--"}
                                 </p>
                               </div>
@@ -676,12 +695,12 @@ const HomePage: React.FC = () => {
                                 <p className="font-medium">
                                   {event.outTime
                                     ? new Date(
-                                        event.outTime
-                                      ).toLocaleTimeString([], {
-                                        hour: "2-digit",
-                                        minute: "2-digit",
-                                        second: "2-digit",
-                                      })
+                                      event.outTime
+                                    ).toLocaleTimeString([], {
+                                      hour: "2-digit",
+                                      minute: "2-digit",
+                                      second: "2-digit",
+                                    })
                                     : "--:--:--"}
                                 </p>
                               </div>
