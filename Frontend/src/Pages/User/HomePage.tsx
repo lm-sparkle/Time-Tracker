@@ -55,7 +55,6 @@ const HomePage: React.FC = () => {
   const [clockInCount, setClockInCount] = useState(0);
   const [clockOutCount, setClockOutCount] = useState(0);
   const [userInTime, setUserInTime] = useState<string>("");
-  const [userOutTime, setUserOutTime] = useState<string>("");
 
   const breakTimerRef = useRef<NodeJS.Timeout | null>(null);
   const timerRef = useRef<NodeJS.Timeout | null>(null);
@@ -162,13 +161,6 @@ const HomePage: React.FC = () => {
     setIsModalOpen(true);
     setShowConfirmModal(false);
     fetchMailInfo();
-    setUserOutTime(
-      new Date().toLocaleTimeString([], {
-        hour: "2-digit",
-        minute: "2-digit",
-        second: "2-digit",
-      })
-    );
   };
   const closeModals = () => {
     setIsModalOpen(false);
@@ -301,14 +293,6 @@ const HomePage: React.FC = () => {
           }
         );
 
-        const userOutTime =
-          latestEntry.status === "clocked_out"
-            ? new Date(latestEntry.outTime).toLocaleTimeString([], {
-                hour: "2-digit",
-                minute: "2-digit",
-                second: "2-digit",
-              })
-            : "";
 
         const now = new Date();
         const outTime = new Date(latestEntry.outTime);
@@ -319,7 +303,6 @@ const HomePage: React.FC = () => {
         setCurrentBreakTime(diffInSec);
 
         setUserInTime(userInTime);
-        setUserOutTime(userOutTime);
       }
       setUserTimes(data);
       setClockInCount(
@@ -405,7 +388,6 @@ const HomePage: React.FC = () => {
           userMail: user?.email,
           message: message,
           inTime: userInTime,
-          outTime: userOutTime,
           totalBreakTime: totalBreakTime,
         },
         {
