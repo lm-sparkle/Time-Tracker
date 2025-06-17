@@ -34,6 +34,7 @@ export const sendStatusUpdate = async (
       userMail,
       message,
       inTime,
+      // outTime,
       totalBreakTime,
     } = req.body
     const subject = `Status Update By ${userName} - ${currentDate}`
@@ -46,13 +47,15 @@ export const sendStatusUpdate = async (
     const userEntries = await Time.find({
       userId: req.body.userId,
       inTime: { $gte: today, $lt: tomorrow },
-    }).sort({ inTime: -1 })
+    })
+      .sort({ inTime: -1 })
 
-    const userOutTime = userEntries[0].outTime
-      ? new Date(userEntries[0].outTime).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' })
-      : 'N/A';
-
-
+      const userOutTime = userEntries[0].outTime 
+        ? new Date(userEntries[0].outTime).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' }) 
+        : 'N/A';
+      
+    console.log(userOutTime);
+    
     let totalWorkingTimeInSeconds = 0
     userEntries.forEach((userEntry) => {
       if (userEntry.workingHours) {
