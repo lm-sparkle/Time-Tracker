@@ -34,7 +34,6 @@ export const sendStatusUpdate = async (
       userMail,
       message,
       inTime,
-      outTime,
       totalBreakTime,
     } = req.body
     const subject = `Status Update By ${userName} - ${currentDate}`
