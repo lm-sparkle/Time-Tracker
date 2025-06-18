@@ -54,7 +54,7 @@ const HomePage: React.FC = () => {
   const [breakSeconds, setBreakSeconds] = useState(0);
   const [clockInCount, setClockInCount] = useState(0);
   const [clockOutCount, setClockOutCount] = useState(0);
-  const [userInTime, setUserInTime] = useState<string>("");
+  // const [userInTime, setUserInTime] = useState<string>("");
   // const [userOutTime, setUserOutTime] = useState<string>("");
 
   const breakTimerRef = useRef<NodeJS.Timeout | null>(null);
@@ -296,14 +296,14 @@ const HomePage: React.FC = () => {
         const latestEntry = data[0];
         const earliestEntry = data[data.length - 1];
 
-        const userInTime = new Date(earliestEntry.inTime).toLocaleTimeString(
-          [],
-          {
-            hour: "2-digit",
-            minute: "2-digit",
-            second: "2-digit",
-          }
-        );
+        // const userInTime = new Date(earliestEntry.inTime).toLocaleTimeString(
+        //   [],
+        //   {
+        //     hour: "2-digit",
+        //     minute: "2-digit",
+        //     second: "2-digit",
+        //   }
+        // );
 
         // const userOutTime =
         //   latestEntry.status === "clocked_out"
@@ -322,8 +322,7 @@ const HomePage: React.FC = () => {
 
         setCurrentBreakTime(diffInSec);
 
-        setUserInTime(userInTime);
-        // console.log("while setting userOutTime", userOutTime);
+        // setUserInTime(userInTime);
 
         // setUserOutTime(userOutTime);
       }
@@ -408,7 +407,7 @@ const HomePage: React.FC = () => {
           userName: user?.fullName,
           userMail: user?.email,
           message: message,
-          inTime: userInTime,
+          // inTime: userInTime,
           // outTime: userOutTime,
           totalBreakTime: totalBreakTime,
         },
