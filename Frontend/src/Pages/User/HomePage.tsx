@@ -294,7 +294,7 @@ const HomePage: React.FC = () => {
 
       if (data.length > 0) {
         const latestEntry = data[0];
-        const earliestEntry = data[data.length - 1];
+        // const earliestEntry = data[data.length - 1];
 
         // const userInTime = new Date(earliestEntry.inTime).toLocaleTimeString(
         //   [],
