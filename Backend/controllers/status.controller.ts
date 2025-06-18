@@ -47,15 +47,27 @@ export const sendStatusUpdate = async (
     const userEntries = await Time.find({
       userId: req.body.userId,
       inTime: { $gte: today, $lt: tomorrow },
-    })
-      .sort({ inTime: -1 })
+    }).sort({ inTime: 1 }) // Get earliest entry first
 
-      const userOutTime = userEntries[0].outTime 
-        ? new Date(userEntries[0].outTime).toLocaleTimeString([], {   timeZone: 'Asia/Kolkata',  hour: '2-digit', minute: '2-digit', second: '2-digit' }) 
-        : 'N/A';
-      
-    console.log(userOutTime);
-    
+    const userInTime = userEntries[0]?.inTime
+      ? new Date(userEntries[0].inTime).toLocaleTimeString([], {
+        timeZone: 'Asia/Kolkata',
+        hour: '2-digit',
+        minute: '2-digit',
+        second: '2-digit',
+      })
+      : 'N/A'
+
+    const userOutTime = userEntries[userEntries.length - 1]?.outTime
+      ? new Date(userEntries[userEntries.length - 1].outTime).toLocaleTimeString([], {
+        timeZone: 'Asia/Kolkata',
+        hour: '2-digit',
+        minute: '2-digit',
+        second: '2-digit',
+      })
+      : 'N/A'
+
+
     let totalWorkingTimeInSeconds = 0
     userEntries.forEach((userEntry) => {
       if (userEntry.workingHours) {
@@ -84,7 +96,7 @@ Status Message:
 ${message}
 
 Time Summary:
-- In Time: ${inTime}
+- In Time: ${userInTime}
 - Out Time: ${userOutTime}
 - Break Time: ${totalBreakTime}
 - Working Time: ${totalWorkingTime}
