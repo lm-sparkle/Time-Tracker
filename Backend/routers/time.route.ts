@@ -6,8 +6,7 @@ import {
   getTimeEntries,
   getUserLatestEntry,
   getUserTimeEntries,
-  getFirstEntryEachDayForDateRange,
-  getAggregatedWorkingHoursPerDay,
+  getAllEntriesForDateRange,
   updateAttendanceStatus
 } from "../controllers/time.controller";
 import { authenticateJWT } from "../middlewares/auth.middleware";
@@ -20,8 +19,7 @@ router.put("/final-clock-out/:id",authenticateJWT, finalClockOut);
 router.get("/userTime",authenticateJWT, getTimeEntries);
 router.get("/user/:userId",authenticateJWT, getUserTimeEntries);
 router.get("/user/latest/:userId",authenticateJWT, getUserLatestEntry);
-router.get("/first-entry-month",authenticateJWT, getFirstEntryEachDayForDateRange);
-router.get("/aggregated-working-hours",authenticateJWT, getAggregatedWorkingHoursPerDay);
+router.get("/all-entry-month",authenticateJWT, getAllEntriesForDateRange);
 router.put("/update/attendance-status/:id",authenticateJWT, updateAttendanceStatus);
 
 

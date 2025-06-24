@@ -296,7 +296,7 @@ export const getUserLatestEntry = async (
 };
 
 // GET /api/time/first-entry-month
-export const getFirstEntryEachDayForDateRange = async (
+export const getAllEntriesForDateRange = async (
   req: Request,
   res: Response,
   next: NextFunction
@@ -306,71 +306,6 @@ export const getFirstEntryEachDayForDateRange = async (
 
     const now = new Date();
 
-    const start = startDate
-      ? new Date(startDate as string)
-      : new Date(now.getFullYear(), now.getMonth(), 1);
-
-    const end = endDate
-      ? new Date(new Date(endDate as string).setHours(23, 59, 59, 999))
-      : new Date(
-          now.getFullYear(),
-          now.getMonth(),
-          now.getDate(),
-          23,
-          59,
-          59,
-          999
-        ); // Include today
-
-    const entries = await Time.aggregate([
-      {
-        $match: {
-          inTime: {
-            $gte: start,
-            $lte: end,
-          },
-        },
-      },
-      {
-        $project: {
-          userId: 1,
-          inTime: 1,
-          status: 1,
-          outTime: 1,
-          workingHours: 1,
-          attendanceStatus: 1,
-          dateString: {
-            $dateToString: { format: "%Y-%m-%d", date: "$inTime" },
-          },
-        },
-      },
-      { $sort: { inTime: 1 } },
-      {
-        $group: {
-          _id: { userId: "$userId", date: "$dateString" },
-          firstEntry: { $first: "$$ROOT" },
-        },
-      },
-      { $replaceRoot: { newRoot: "$firstEntry" } },
-      { $sort: { userId: 1, inTime: 1 } },
-    ]);
-
-    res.status(200).json(entries);
-  } catch (error) {
-    next(error);
-  }
-};
-
-// GET /api/time/aggregated-working-hours
-export const getAggregatedWorkingHoursPerDay = async (
-  req: Request,
-  res: Response,
-  next: NextFunction
-) => {
-  try {
-    const { startDate, endDate } = req.query;
-
-    const now = new Date();
     const start = startDate
       ? new Date(startDate as string)
       : new Date(now.getFullYear(), now.getMonth(), 1);
@@ -394,105 +329,24 @@ export const getAggregatedWorkingHoursPerDay = async (
             $gte: start,
             $lte: end,
           },
-          workingHours: { $ne: null },
         },
       },
       {
         $project: {
           userId: 1,
+          inTime: 1,
+          outTime: 1,
+          status: 1,
           workingHours: 1,
+          attendanceStatus: 1,
           dateString: {
             $dateToString: { format: "%Y-%m-%d", date: "$inTime" },
           },
         },
       },
       {
-        $addFields: {
-          // Convert workingHours ("HH:mm:ss") to total seconds
-          totalSeconds: {
-            $let: {
-              vars: {
-                parts: { $split: ["$workingHours", ":"] },
-              },
-              in: {
-                $add: [
-                  {
-                    $multiply: [
-                      { $toInt: { $arrayElemAt: ["$$parts", 0] } },
-                      3600,
-                    ],
-                  },
-                  {
-                    $multiply: [
-                      { $toInt: { $arrayElemAt: ["$$parts", 1] } },
-                      60,
-                    ],
-                  },
-                  { $toInt: { $arrayElemAt: ["$$parts", 2] } },
-                ],
-              },
-            },
-          },
-        },
+        $sort: { userId: 1, inTime: 1 },
       },
-      {
-        $group: {
-          _id: { userId: "$userId", date: "$dateString" },
-          totalSeconds: { $sum: "$totalSeconds" },
-        },
-      },
-      {
-        $project: {
-          userId: "$_id.userId",
-          dateString: "$_id.date",
-          totalSeconds: 1,
-          workingHours: {
-            $let: {
-              vars: {
-                hours: { $floor: { $divide: ["$totalSeconds", 3600] } },
-                minutes: {
-                  $mod: [{ $floor: { $divide: ["$totalSeconds", 60] } }, 60],
-                },
-                seconds: { $mod: ["$totalSeconds", 60] },
-              },
-              in: {
-                $concat: [
-                  {
-                    $toString: {
-                      $cond: [
-                        { $lt: ["$$hours", 10] },
-                        { $concat: ["0", { $toString: "$$hours" }] },
-                        "$$hours",
-                      ],
-                    },
-                  },
-                  ":",
-                  {
-                    $toString: {
-                      $cond: [
-                        { $lt: ["$$minutes", 10] },
-                        { $concat: ["0", { $toString: "$$minutes" }] },
-                        "$$minutes",
-                      ],
-                    },
-                  },
-                  ":",
-                  {
-                    $toString: {
-                      $cond: [
-                        { $lt: ["$$seconds", 10] },
-                        { $concat: ["0", { $toString: "$$seconds" }] },
-                        "$$seconds",
-                      ],
-                    },
-                  },
-                ],
-              },
-            },
-          },
-        },
-      },
-      { $sort: { userId: 1, dateString: 1 } },
     ]);
 
     res.status(200).json(entries);

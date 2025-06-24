@@ -43,7 +43,6 @@ const Attendance: React.FC = () => {
   const [endDate, setEndDate] = useState<string>("");
 
   const [fetchedEntries, setFetchedEntries] = useState<TimeEntry[]>([]);
-  const [_timeEntries, setTimeEntries] = useState<TimeEntry[]>([]);
   const [searchRange, setSearchRange] = useState<{
     start: string;
     end: string;
@@ -178,25 +177,6 @@ const Attendance: React.FC = () => {
     }
   };
 
-  const fetchTimeEntries = async () => {
-    try {
-      const response = await api.get(`time/aggregated-working-hours`, {
-        headers: {
-          Authorization: `Bearer ${sessionStorage.getItem("token")}`,
-        },
-      });
-
-      const entries = response?.data;
-      setTimeEntries(entries);
-    } catch (error) {
-      Toast.fire({
-        icon: "error",
-        title: `Failed to fetch time entries`,
-      });
-      setTimeEntries([]);
-    }
-  };
-
   const fetchEntriesForDateRange = async () => {
     if (new Date(startDate) > new Date(endDate)) {
       Toast.fire({
@@ -212,7 +192,7 @@ const Attendance: React.FC = () => {
       if (endDate) params.append("endDate", endDate);
 
       const response = await api.get(
-        `/time/first-entry-month?${params.toString()}`,
+        `/time/all-entry-month?${params.toString()}`,
         {
           headers: {
             Authorization: `Bearer ${sessionStorage.getItem("token")}`,
@@ -237,12 +217,6 @@ const Attendance: React.FC = () => {
   useEffect(() => {
     fetchUsers();
   }, []);
-
-  useEffect(() => {
-    if (users.length > 0) {
-      fetchTimeEntries();
-    }
-  }, [users]);
 
   const attendanceStatusMap = useMemo(() => {
     const map: Record<string, string> = {};
