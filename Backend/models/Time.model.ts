@@ -2,6 +2,8 @@ import { Schema, model, Document } from "mongoose";
 
 export type Status = "not_clocked_in" | "clocked_in" | "clocked_out" | "clocked_out_for_break";
 
+export type AttendanceStatus = "absent" | "half_day" | "full_day";
+
 export interface ITime extends Document {
   userId: string;
   status: Status;
@@ -10,6 +12,8 @@ export interface ITime extends Document {
   outTime: Date | null;
   clockOutCount: number;
   workingHours: string | null;
+  attendanceStatus?: AttendanceStatus;
+  computerName?: string;
 }
 
 const timeSchema = new Schema<ITime>({
@@ -20,6 +24,8 @@ const timeSchema = new Schema<ITime>({
   outTime: { type: Date, default: null },
   clockOutCount: { type: Number, default: 0 },
   workingHours: { type: String, default: null },
+  attendanceStatus: { type: String, default: null },
+  computerName: { type: String, default: null },
 }, { timestamps: true });
 
 export default model<ITime>("Time", timeSchema);

@@ -1,3 +1,7 @@
+/* eslint-disable react-hooks/exhaustive-deps */
+/* eslint-disable @typescript-eslint/no-explicit-any */
+/* eslint-disable @typescript-eslint/no-unused-vars */
+/* eslint-disable @typescript-eslint/no-wrapper-object-types */
 import React, {
   useEffect,
   useState,
@@ -116,14 +120,11 @@ const Dashboard: React.FC = () => {
   const fetchUserTimeEntries = async () => {
     const today = new Date().toISOString().split("T")[0];
     try {
-      const response = await api.get(
-        `${API_URL}time/userTime?date=${today}`,
-        {
-          headers: {
-            Authorization: `Bearer ${sessionStorage.getItem("token")}`,
-          },
-        }
-      );
+      const response = await api.get(`${API_URL}time/userTime?date=${today}`, {
+        headers: {
+          Authorization: `Bearer ${sessionStorage.getItem("token")}`,
+        },
+      });
       setUserTimeEntries(response.data);
       return response.data;
     } catch (error) {
@@ -355,10 +356,11 @@ const Dashboard: React.FC = () => {
               currentPage: i + 1,
             }))
           }
-          className={`relative inline-flex items-center px-4 py-2 border text-sm font-medium ${pagination.currentPage === i + 1
+          className={`relative inline-flex items-center px-4 py-2 border text-sm font-medium ${
+            pagination.currentPage === i + 1
               ? "z-10 bg-indigo-50 border-indigo-500 text-indigo-600"
               : "bg-white border-gray-300 text-gray-500 hover:bg-gray-50"
-            }`}
+          }`}
         >
           {i + 1}
         </button>
@@ -389,7 +391,7 @@ const Dashboard: React.FC = () => {
   };
 
   return (
-    <div className="font-sans antialiased bg-gray-50 min-h-screen">
+    <div className="font-sans antialiased min-h-screen">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         <header>
           <div className="flex justify-between items-center mb-8">
@@ -475,15 +477,13 @@ const Dashboard: React.FC = () => {
                             return timeA - timeB;
                           });
 
-                        let trackerStatus = "Not Clocked In";
+                        let trackerStatus = "Clocked Out";
                         if (userEntries.length > 0) {
                           const latest = userEntries[userEntries.length - 1];
                           if (latest.status === "clocked_in")
                             trackerStatus = "Clocked In";
                           else if (latest.status === "clocked_out_for_break")
                             trackerStatus = "On Break";
-                          else if (latest.status === "clocked_out")
-                            trackerStatus = "Clocked Out";
                         }
 
                         let totalLoggedSeconds = 0;
@@ -504,7 +504,7 @@ const Dashboard: React.FC = () => {
                         if (
                           userEntries.length > 0 &&
                           userEntries[userEntries.length - 1].status ===
-                          "clocked_in" &&
+                            "clocked_in" &&
                           userEntries[userEntries.length - 1].inTime &&
                           !userEntries[userEntries.length - 1].outTime
                         ) {
@@ -539,15 +539,15 @@ const Dashboard: React.FC = () => {
                         if (
                           userEntries.length > 0 &&
                           userEntries[userEntries.length - 1].status ===
-                          "clocked_out_for_break" &&
+                            "clocked_out_for_break" &&
                           userEntries[userEntries.length - 1].outTime
                         ) {
                           const lastOut = userEntries[userEntries.length - 1]
                             .outTime
                             ? new Date(
-                              userEntries[userEntries.length - 1].outTime ||
-                              ""
-                            ).getTime()
+                                userEntries[userEntries.length - 1].outTime ||
+                                  ""
+                              ).getTime()
                             : 0;
                           totalBreakSeconds += Math.floor(
                             (Date.now() - lastOut) / 1000
@@ -610,33 +610,33 @@ const Dashboard: React.FC = () => {
                           (entry) => entry.userId === user._id
                         ).length > 0
                           ? (() => {
-                            const totalWorkedMs = userTimeEntries
-                              .filter((entry) => entry.userId === user._id)
-                              .reduce((total, entry) => {
-                                const entryDuration =
-                                  entry.outTime && entry.inTime
-                                    ? new Date(entry.outTime).getTime() -
-                                    new Date(entry.inTime).getTime()
-                                    : 0;
-                                return total + entryDuration;
-                              }, 0);
+                              const totalWorkedMs = userTimeEntries
+                                .filter((entry) => entry.userId === user._id)
+                                .reduce((total, entry) => {
+                                  const entryDuration =
+                                    entry.outTime && entry.inTime
+                                      ? new Date(entry.outTime).getTime() -
+                                        new Date(entry.inTime).getTime()
+                                      : 0;
+                                  return total + entryDuration;
+                                }, 0);
 
-                            const totalSeconds = Math.floor(
-                              totalWorkedMs / 1000
-                            );
-                            const hours = Math.floor(totalSeconds / 3600);
-                            const minutes = Math.floor(
-                              (totalSeconds % 3600) / 60
-                            );
-                            const seconds = totalSeconds % 60;
+                              const totalSeconds = Math.floor(
+                                totalWorkedMs / 1000
+                              );
+                              const hours = Math.floor(totalSeconds / 3600);
+                              const minutes = Math.floor(
+                                (totalSeconds % 3600) / 60
+                              );
+                              const seconds = totalSeconds % 60;
 
-                            return `${String(hours).padStart(
-                              2,
-                              "0"
-                            )}:${String(minutes).padStart(2, "0")}:${String(
-                              seconds
-                            ).padStart(2, "0")}`;
-                          })()
+                              return `${String(hours).padStart(
+                                2,
+                                "0"
+                              )}:${String(minutes).padStart(2, "0")}:${String(
+                                seconds
+                              ).padStart(2, "0")}`;
+                            })()
                           : 0}
                       </td>
 
@@ -645,22 +645,22 @@ const Dashboard: React.FC = () => {
                           (entry) => entry.userId === user._id
                         ).length > 0
                           ? (() => {
-                            const latestEntry = userTimeEntries
-                              .filter((entry) => entry.userId === user._id)
-                              .sort((a, b) => {
-                                const timeA = a.inTime
-                                  ? new Date(a.inTime).getTime()
-                                  : 0;
-                                const timeB = b.inTime
-                                  ? new Date(b.inTime).getTime()
-                                  : 0;
-                                return timeB - timeA;
-                              })[0];
+                              const latestEntry = userTimeEntries
+                                .filter((entry) => entry.userId === user._id)
+                                .sort((a, b) => {
+                                  const timeA = a.inTime
+                                    ? new Date(a.inTime).getTime()
+                                    : 0;
+                                  const timeB = b.inTime
+                                    ? new Date(b.inTime).getTime()
+                                    : 0;
+                                  return timeB - timeA;
+                                })[0];
 
-                            return latestEntry?.outTime
-                              ? new Date(latestEntry.outTime).toLocaleString()
-                              : "-";
-                          })()
+                              return latestEntry?.outTime
+                                ? new Date(latestEntry.outTime).toLocaleString()
+                                : "-";
+                            })()
                           : "No entries"}
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap">
@@ -680,10 +680,11 @@ const Dashboard: React.FC = () => {
                       <td className="px-6 py-4 whitespace-nowrap cursor-pointer">
                         <button
                           onClick={() => openStatusModal(user)}
-                          className={`inline-flex items-center px-2 py-1 rounded text-xs font-medium cursor-pointer ${user.isActive
+                          className={`inline-flex items-center px-2 py-1 rounded text-xs font-medium cursor-pointer ${
+                            user.isActive
                               ? "bg-green-100 text-green-700"
                               : "bg-red-200 text-red-600"
-                            }`}
+                          }`}
                         >
                           {user.isActive ? (
                             <>
@@ -763,7 +764,7 @@ const Dashboard: React.FC = () => {
 
       {/* Add User Modal */}
       <Modal isOpen={showAddModal} onClose={closeModals}>
-        <div className="bg-white rounded-lg shadow-lg max-w-lg w-full p-6">
+        <div className="bg-white rounded-lg shadow-lg max-w-lg w-full p-6 mx-auto">
           <h3 className="text-lg font-medium text-gray-900 mb-4">
             Add New User
           </h3>
@@ -871,7 +872,7 @@ const Dashboard: React.FC = () => {
 
       {/* Edit User Modal */}
       <Modal isOpen={showEditModal} onClose={closeModals}>
-        <div className="bg-white rounded-lg shadow-lg max-w-lg w-full p-6">
+        <div className="bg-white rounded-lg shadow-lg max-w-lg w-full p-6 mx-auto">
           <h3 className="text-lg font-medium text-gray-900 mb-4">Edit User</h3>
           <form onSubmit={handleEditUser} className="space-y-4">
             <div className="flex gap-2">
@@ -934,6 +935,7 @@ const Dashboard: React.FC = () => {
         </div>
       </Modal>
 
+      {/* User Status Modal */}
       <Modal isOpen={showStatusModal} onClose={closeStatusModal}>
         {statusUser && (
           <div className="relative bg-white rounded-xl shadow-xl max-w-md w-full mx-4 transform transition-all duration-300">
@@ -959,8 +961,9 @@ const Dashboard: React.FC = () => {
                     className="w-16 h-16 rounded-full border-4 border-gray-200 object-cover shadow-sm"
                   />
                   <span
-                    className={`absolute bottom-0 right-0 w-5 h-5 rounded-full border-2 border-white ${pendingStatus === true ? "bg-green-500" : "bg-red-400"
-                      }`}
+                    className={`absolute bottom-0 right-0 w-5 h-5 rounded-full border-2 border-white ${
+                      pendingStatus === true ? "bg-green-500" : "bg-red-400"
+                    }`}
                   ></span>
                 </div>
                 <div>
@@ -969,10 +972,11 @@ const Dashboard: React.FC = () => {
                   </h4>
                   <p className="text-gray-600 text-sm">{statusUser.email}</p>
                   <div
-                    className={`inline-block px-3 py-1 rounded-full text-xs mt-1 font-medium ${pendingStatus === true
+                    className={`inline-block px-3 py-1 rounded-full text-xs mt-1 font-medium ${
+                      pendingStatus === true
                         ? "bg-green-100 text-green-800"
                         : "bg-red-200 text-red-600"
-                      }`}
+                    }`}
                   >
                     {pendingStatus === true ? "Active" : "Inactive"}
                   </div>
@@ -985,20 +989,22 @@ const Dashboard: React.FC = () => {
                 <div className="flex space-x-3">
                   <button
                     onClick={() => handleStatusChange(true)}
-                    className={`flex-1 border-2 font-medium py-3 px-4 rounded-lg flex items-center justify-center transition-all duration-200 ${pendingStatus === true
+                    className={`flex-1 border-2 font-medium py-3 px-4 rounded-lg flex items-center justify-center transition-all duration-200 ${
+                      pendingStatus === true
                         ? "border-green-400 bg-green-50 text-green-700"
                         : "border-gray-300 bg-white text-gray-700 hover:bg-green-50"
-                      }`}
+                    }`}
                   >
                     <FaCheckCircle className="mr-2" />
                     Activate
                   </button>
                   <button
                     onClick={() => handleStatusChange(false)}
-                    className={`flex-1 border-2 font-medium py-3 px-4 rounded-lg flex items-center justify-center transition-all duration-200 ${pendingStatus === false
+                    className={`flex-1 border-2 font-medium py-3 px-4 rounded-lg flex items-center justify-center transition-all duration-200 ${
+                      pendingStatus === false
                         ? "border-red-400 bg-red-100 text-red-700"
                         : "border-gray-300 bg-white text-gray-700 hover:bg-gray-100"
-                      }`}
+                    }`}
                   >
                     <FaTimesCircle className="mr-2" />
                     Deactivate

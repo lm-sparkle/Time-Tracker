@@ -1,3 +1,6 @@
+/* eslint-disable react-hooks/exhaustive-deps */
+/* eslint-disable @typescript-eslint/no-explicit-any */
+/* eslint-disable @typescript-eslint/no-unused-vars */
 import React, { useState, useEffect, useRef, type FormEvent } from "react";
 import {
   FaUserClock,
@@ -7,7 +10,6 @@ import {
   FaDoorOpen,
   FaClipboardCheck,
   FaTimes,
-  // FaEnvelope,
   FaTag,
   FaPaperPlane,
   FaClock,
@@ -54,8 +56,7 @@ const HomePage: React.FC = () => {
   const [breakSeconds, setBreakSeconds] = useState(0);
   const [clockInCount, setClockInCount] = useState(0);
   const [clockOutCount, setClockOutCount] = useState(0);
-  // const [userInTime, setUserInTime] = useState<string>("");
-  // const [userOutTime, setUserOutTime] = useState<string>("");
+  const [userInTime, setUserInTime] = useState<string>("");
 
   const breakTimerRef = useRef<NodeJS.Timeout | null>(null);
   const timerRef = useRef<NodeJS.Timeout | null>(null);
@@ -165,13 +166,6 @@ const HomePage: React.FC = () => {
     setIsModalOpen(true);
     setShowConfirmModal(false);
     fetchMailInfo();
-    // setUserOutTime(
-    //   new Date().toLocaleTimeString([], {
-    //     hour: "2-digit",
-    //     minute: "2-digit",
-    //     second: "2-digit",
-    //   })
-    // );
   };
   const closeModals = () => {
     setIsModalOpen(false);
@@ -251,7 +245,6 @@ const HomePage: React.FC = () => {
     }
 
     if (workedSeconds >= 28800) {
-      // 8 hours = 28800 seconds
       setIsModalOpen(true);
       fetchMailInfo();
     } else {
@@ -294,25 +287,16 @@ const HomePage: React.FC = () => {
 
       if (data.length > 0) {
         const latestEntry = data[0];
-        // const earliestEntry = data[data.length - 1];
+        const earliestEntry = data[data.length - 1];
 
-        // const userInTime = new Date(earliestEntry.inTime).toLocaleTimeString(
-        //   [],
-        //   {
-        //     hour: "2-digit",
-        //     minute: "2-digit",
-        //     second: "2-digit",
-        //   }
-        // );
-
-        // const userOutTime =
-        //   latestEntry.status === "clocked_out"
-        //     ? new Date(latestEntry.outTime).toLocaleTimeString([], {
-        //         hour: "2-digit",
-        //         minute: "2-digit",
-        //         second: "2-digit",
-        //       })
-        //     : "";
+        const userInTime = new Date(earliestEntry.inTime).toLocaleTimeString(
+          [],
+          {
+            hour: "2-digit",
+            minute: "2-digit",
+            second: "2-digit",
+          }
+        );
 
         const now = new Date();
         const outTime = new Date(latestEntry.outTime);
@@ -322,9 +306,7 @@ const HomePage: React.FC = () => {
 
         setCurrentBreakTime(diffInSec);
 
-        // setUserInTime(userInTime);
-
-        // setUserOutTime(userOutTime);
+        setUserInTime(userInTime);
       }
       setUserTimes(data);
       setClockInCount(
@@ -339,8 +321,8 @@ const HomePage: React.FC = () => {
       const timeToSeconds = (timeStr: {
         split: (arg0: string) => {
           (): any;
-          new(): any;
-          map: { (arg0: NumberConstructor): [any, any, any]; new(): any };
+          new (): any;
+          map: { (arg0: NumberConstructor): [any, any, any]; new (): any };
         };
       }) => {
         const [h, m, s] = timeStr.split(":").map(Number);
@@ -373,7 +355,8 @@ const HomePage: React.FC = () => {
     try {
       const today = new Date().toISOString().split("T")[0];
       const response = await api.get(
-        `${import.meta.env.VITE_API_URL
+        `${
+          import.meta.env.VITE_API_URL
         }time/user/latest/${sessionStorage.getItem("userId")}?date=${today}`,
         {
           headers: {
@@ -400,14 +383,15 @@ const HomePage: React.FC = () => {
       if (!(status === "clocked_in" || status === "clocked_out_for_break"))
         return;
       const response = await api.put(
-        `${import.meta.env.VITE_API_URL
+        `${
+          import.meta.env.VITE_API_URL
         }time/final-clock-out/${sessionStorage.getItem("time_Id")}`,
         {
           userId: user?.id,
           userName: user?.fullName,
           userMail: user?.email,
           message: message,
-          // inTime: userInTime,
+          inTime: userInTime,
           // outTime: userOutTime,
           totalBreakTime: totalBreakTime,
         },
@@ -485,12 +469,12 @@ const HomePage: React.FC = () => {
                       <div className="text-2xl font-semibold text-gray-900">
                         {status === "clocked_in"
                           ? formatTime(
-                            (totalWorkingTime
-                              ? totalWorkingTime
-                                .split(":")
-                                .reduce((acc, time) => 60 * acc + +time, 0)
-                              : 0) + totalSecondsToday
-                          )
+                              (totalWorkingTime
+                                ? totalWorkingTime
+                                    .split(":")
+                                    .reduce((acc, time) => 60 * acc + +time, 0)
+                                : 0) + totalSecondsToday
+                            )
                           : totalWorkingTime || "00:00:00"}
                       </div>
                     </dd>
@@ -533,11 +517,12 @@ const HomePage: React.FC = () => {
                   status === "clocked_out_for_break"
                 )
               }
-              className={`time-card bg-white overflow-hidden shadow rounded-lg text-left ${status === "not_clocked_in" ||
-                  status === "clocked_out_for_break"
+              className={`time-card bg-white overflow-hidden shadow rounded-lg text-left ${
+                status === "not_clocked_in" ||
+                status === "clocked_out_for_break"
                   ? "cursor-pointer hover:shadow-lg transition-shadow"
                   : "opacity-50 cursor-not-allowed"
-                }`}
+              }`}
             >
               <div className="px-4 py-5 sm:p-6 text-center">
                 <div className="mx-auto flex-shrink-0 flex items-center justify-center h-12 w-12 rounded-full bg-green-100">
@@ -565,10 +550,11 @@ const HomePage: React.FC = () => {
             <button
               onClick={handleClockOut}
               disabled={status !== "clocked_in"}
-              className={`time-card bg-white overflow-hidden shadow rounded-lg text-left ${status === "clocked_in"
+              className={`time-card bg-white overflow-hidden shadow rounded-lg text-left ${
+                status === "clocked_in"
                   ? "cursor-pointer hover:shadow-lg transition-shadow"
                   : "opacity-50 cursor-not-allowed"
-                }`}
+              }`}
             >
               <div className="px-4 py-5 sm:p-6 text-center">
                 <div className="mx-auto flex-shrink-0 flex items-center justify-center h-12 w-12 rounded-full bg-yellow-100">
@@ -598,10 +584,11 @@ const HomePage: React.FC = () => {
               disabled={
                 !(status === "clocked_in" || status === "clocked_out_for_break")
               }
-              className={`time-card bg-white overflow-hidden shadow rounded-lg text-left ${status === "clocked_in" || status === "clocked_out_for_break"
+              className={`time-card bg-white overflow-hidden shadow rounded-lg text-left ${
+                status === "clocked_in" || status === "clocked_out_for_break"
                   ? "cursor-pointer hover:shadow-lg transition-shadow"
                   : "opacity-50 cursor-not-allowed"
-                }`}
+              }`}
             >
               <div className="px-4 py-5 sm:p-6 text-center">
                 <div className="mx-auto flex-shrink-0 flex items-center justify-center h-12 w-12 rounded-full bg-red-100">
@@ -616,8 +603,8 @@ const HomePage: React.FC = () => {
                     <>
                       {userLatestTime[0]?.outTime
                         ? new Date(
-                          userLatestTime[0]?.outTime
-                        ).toLocaleTimeString()
+                            userLatestTime[0]?.outTime
+                          ).toLocaleTimeString()
                         : "--:--:--"}
                     </>
                   ) : (
@@ -674,13 +661,13 @@ const HomePage: React.FC = () => {
                                 <p className="font-medium">
                                   {event.inTime
                                     ? new Date(event.inTime).toLocaleTimeString(
-                                      [],
-                                      {
-                                        hour: "2-digit",
-                                        minute: "2-digit",
-                                        second: "2-digit",
-                                      }
-                                    )
+                                        [],
+                                        {
+                                          hour: "2-digit",
+                                          minute: "2-digit",
+                                          second: "2-digit",
+                                        }
+                                      )
                                     : "--:--:--"}
                                 </p>
                               </div>
@@ -694,12 +681,12 @@ const HomePage: React.FC = () => {
                                 <p className="font-medium">
                                   {event.outTime
                                     ? new Date(
-                                      event.outTime
-                                    ).toLocaleTimeString([], {
-                                      hour: "2-digit",
-                                      minute: "2-digit",
-                                      second: "2-digit",
-                                    })
+                                        event.outTime
+                                      ).toLocaleTimeString([], {
+                                        hour: "2-digit",
+                                        minute: "2-digit",
+                                        second: "2-digit",
+                                      })
                                     : "--:--:--"}
                                 </p>
                               </div>

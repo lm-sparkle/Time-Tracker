@@ -4,6 +4,8 @@ import {
   FaUserShield,
   FaChevronDown,
   FaChevronUp,
+  FaBars,
+  FaTimes,
 } from "react-icons/fa";
 
 import { Link, useLocation } from "react-router-dom";
@@ -18,9 +20,9 @@ const Navbar = () => {
   const [dropdownOpen, setDropdownOpen] = useState(false);
   const profileRef = useRef<HTMLButtonElement>(null);
   const dropdownRef = useRef<HTMLDivElement>(null);
-
   const adminButtonRef = useRef<HTMLButtonElement>(null);
   const adminDropdownRef = useRef<HTMLDivElement>(null);
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
   const handleLogout = () => {
     logout();
@@ -71,6 +73,21 @@ const Navbar = () => {
     return initials;
   };
 
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (
+        adminDropdownRef.current &&
+        !adminDropdownRef.current.contains(event.target as Node) &&
+        adminButtonRef.current &&
+        !adminButtonRef.current.contains(event.target as Node)
+      ) {
+        setDropdownOpen(false);
+      }
+    };
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, []);
+
   return (
     <div className="sticky top-0 z-50">
       {token ? (
@@ -80,16 +97,41 @@ const Navbar = () => {
               <nav className="bg-indigo-700 text-white shadow-sm">
                 <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
                   <div className="flex justify-between h-16 items-center">
-                    <div className="flex items-center space-x-3">
+                    {/* Logo / Brand */}
+                    <Link
+                      to="/admin/dashboard"
+                      className="flex items-center space-x-3"
+                    >
                       <FaShieldAlt className="text-2xl" />
                       <span className="text-xl font-bold">Admin Panel</span>
-                    </div>
-                    <div className="flex items-center space-x-4 relative">
+                    </Link>
+
+                    {/* Desktop Navigation */}
+                    <div className="hidden md:flex items-center space-x-6 relative">
+                      <Link
+                        to="/admin/dashboard"
+                        className="font-medium hover:underline"
+                      >
+                        User Management
+                      </Link>
+                      <Link
+                        to="/admin/attendance"
+                        className="font-medium hover:underline"
+                      >
+                        Attendance
+                      </Link>
+                      <Link
+                        to="/admin/status-report"
+                        className="font-medium hover:underline"
+                      >
+                        Status Report
+                      </Link>
+
                       {/* Avatar + Dropdown */}
                       <div className="relative">
                         <button
                           ref={adminButtonRef}
-                          className={`flex items-center space-x-2 ml-4 rounded-full p-1 ${
+                          className={`flex items-center space-x-2 rounded-full p-1 ${
                             dropdownOpen ? "border-2 border-white" : ""
                           }`}
                           onClick={() => setDropdownOpen(!dropdownOpen)}
@@ -105,7 +147,7 @@ const Navbar = () => {
                         {dropdownOpen && (
                           <div
                             ref={adminDropdownRef}
-                            className="absolute right-0 mt-2 w-32 bg-white text-black rounded-md shadow-lg py-1 z-10 border border-black"
+                            className="absolute right-0 mt-2 w-32 bg-white text-black rounded-md shadow-lg py-1 z-10 border"
                           >
                             <button
                               onClick={handleLogout}
@@ -117,8 +159,54 @@ const Navbar = () => {
                         )}
                       </div>
                     </div>
+
+                    {/* Mobile Menu Button */}
+                    <div className="md:hidden">
+                      <button
+                        onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
+                        className="text-2xl focus:outline-none"
+                      >
+                        {mobileMenuOpen ? <FaTimes /> : <FaBars />}
+                      </button>
+                    </div>
                   </div>
                 </div>
+
+                {/* Mobile Menu */}
+                {mobileMenuOpen && (
+                  <div className="md:hidden px-4 pb-4">
+                    <Link
+                      to="/admin/dashboard"
+                      className="block py-2 font-medium"
+                      onClick={() => setMobileMenuOpen(false)}
+                    >
+                      User Management
+                    </Link>
+                    <Link
+                      to="/admin/attendance"
+                      className="block py-2 font-medium"
+                      onClick={() => setMobileMenuOpen(false)}
+                    >
+                      Attendance
+                    </Link>
+                    <Link
+                      to="/admin/status-report"
+                      className="block py-2 font-medium"
+                      onClick={() => setMobileMenuOpen(false)}
+                    >
+                      Status Report
+                    </Link>
+                    <button
+                      onClick={() => {
+                        handleLogout();
+                        setMobileMenuOpen(false);
+                      }}
+                      className="block w-full text-left py-2 font-medium text-red-200 hover:text-white"
+                    >
+                      Logout
+                    </button>
+                  </div>
+                )}
               </nav>
             </>
           ) : (

@@ -17,9 +17,6 @@ const PublicRoute: React.FC<PublicRouteProps> = ({ children }) => {
   if (token) {
     try {
       const decoded = jwtDecode<JwtPayload>(token);
-      console.log(decoded, "decoded");
-      
-
       if (decoded.exp * 1000 > Date.now()) {
         // Token is valid, redirect based on role
         if (decoded.role === "admin") {

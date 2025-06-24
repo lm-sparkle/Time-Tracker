@@ -1,7 +1,14 @@
 import { Request, Response, NextFunction } from "express";
-import Time from "../models/Time.model";
+import Time, { AttendanceStatus } from "../models/Time.model";
 import User from "../models/User.model";
 import { sendStatusUpdate } from "./status.controller";
+import os from "os";
+
+// Helper function
+function convertTimeToSeconds(time: string): number {
+  const [hours, minutes, seconds] = time.split(":").map(Number);
+  return hours * 3600 + minutes * 60 + seconds;
+}
 
 // POST /api/time/clock-in
 export const clockIn = async (
@@ -30,6 +37,7 @@ export const clockIn = async (
       clockOutCount: 0,
       outTime: null,
       workingHours: null,
+      computerName: os.hostname(),
     });
 
     res.status(201).json(entry);
@@ -70,6 +78,41 @@ export const clockOut = async (
 
     await entry.save();
 
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    const tomorrow = new Date(today);
+    tomorrow.setDate(today.getDate() + 1);
+    const entries = await Time.find({
+      userId: entry.userId,
+      inTime: {
+        $gte: today,
+        $lt: tomorrow,
+      },
+    }).sort({ inTime: -1 });
+
+    // Accumulate total working hours
+    const totalWorkedSeconds = entries.reduce((acc, currEntry) => {
+      const entrySeconds = currEntry.workingHours
+        ? convertTimeToSeconds(currEntry.workingHours)
+        : 0;
+      return acc + entrySeconds;
+    }, 0);
+
+    // Determine Attendance Status based on total working hours
+    let attendanceStatus: AttendanceStatus;
+    if (totalWorkedSeconds >= 8 * 3600) {
+      attendanceStatus = "full_day";
+    } else if (totalWorkedSeconds >= 4 * 3600) {
+      attendanceStatus = "half_day";
+    } else {
+      attendanceStatus = "absent";
+    }
+
+    // Update the entry's attendance status
+    entry.attendanceStatus = attendanceStatus;
+
+    await entry.save();
+
     res.status(200).json(entry);
   } catch (error) {
     next(error);
@@ -92,9 +135,7 @@ export const finalClockOut = async (
       return res.status(400).json({ message: "Entry already clocked out." });
 
     const outTime = new Date();
-
     const totalWorkedMs = outTime.getTime() - entry.inTime.getTime();
-
     const totalSeconds = Math.floor(totalWorkedMs / 1000);
     const hours = Math.floor(totalSeconds / 3600);
     const minutes = Math.floor((totalSeconds % 3600) / 60);
@@ -109,7 +150,42 @@ export const finalClockOut = async (
     entry.status = "clocked_out";
 
     await entry.save();
-    
+
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    const tomorrow = new Date(today);
+    tomorrow.setDate(today.getDate() + 1);
+    const entries = await Time.find({
+      userId: entry.userId,
+      inTime: {
+        $gte: today,
+        $lt: tomorrow,
+      },
+    }).sort({ inTime: -1 });
+
+    // Accumulate total working hours
+    const totalWorkedSeconds = entries.reduce((acc, currEntry) => {
+      const entrySeconds = currEntry.workingHours
+        ? convertTimeToSeconds(currEntry.workingHours)
+        : 0;
+      return acc + entrySeconds;
+    }, 0);
+
+    // Determine Attendance Status based on total working hours
+    let attendanceStatus: AttendanceStatus;
+    if (totalWorkedSeconds >= 8 * 3600) {
+      attendanceStatus = "full_day";
+    } else if (totalWorkedSeconds >= 4 * 3600) {
+      attendanceStatus = "half_day";
+    } else {
+      attendanceStatus = "absent";
+    }
+
+    // Update the entry's attendance status
+    entry.attendanceStatus = attendanceStatus;
+
+    await entry.save();
+
     // Send status update email
     await sendStatusUpdate(req, res, next);
     res.status(200).json(entry);
@@ -218,3 +294,247 @@ export const getUserLatestEntry = async (
     next(error);
   }
 };
+
+// GET /api/time/first-entry-month
+export const getFirstEntryEachDayForDateRange = async (
+  req: Request,
+  res: Response,
+  next: NextFunction
+) => {
+  try {
+    const { startDate, endDate } = req.query;
+
+    const now = new Date();
+
+    const start = startDate
+      ? new Date(startDate as string)
+      : new Date(now.getFullYear(), now.getMonth(), 1);
+
+    const end = endDate
+      ? new Date(new Date(endDate as string).setHours(23, 59, 59, 999))
+      : new Date(
+          now.getFullYear(),
+          now.getMonth(),
+          now.getDate(),
+          23,
+          59,
+          59,
+          999
+        ); // Include today
+
+    const entries = await Time.aggregate([
+      {
+        $match: {
+          inTime: {
+            $gte: start,
+            $lte: end,
+          },
+        },
+      },
+      {
+        $project: {
+          userId: 1,
+          inTime: 1,
+          status: 1,
+          outTime: 1,
+          workingHours: 1,
+          attendanceStatus: 1,
+          dateString: {
+            $dateToString: { format: "%Y-%m-%d", date: "$inTime" },
+          },
+        },
+      },
+      { $sort: { inTime: 1 } },
+      {
+        $group: {
+          _id: { userId: "$userId", date: "$dateString" },
+          firstEntry: { $first: "$$ROOT" },
+        },
+      },
+      { $replaceRoot: { newRoot: "$firstEntry" } },
+      { $sort: { userId: 1, inTime: 1 } },
+    ]);
+
+    res.status(200).json(entries);
+  } catch (error) {
+    next(error);
+  }
+};
+
+// GET /api/time/aggregated-working-hours
+export const getAggregatedWorkingHoursPerDay = async (
+  req: Request,
+  res: Response,
+  next: NextFunction
+) => {
+  try {
+    const { startDate, endDate } = req.query;
+
+    const now = new Date();
+    const start = startDate
+      ? new Date(startDate as string)
+      : new Date(now.getFullYear(), now.getMonth(), 1);
+
+    const end = endDate
+      ? new Date(new Date(endDate as string).setHours(23, 59, 59, 999))
+      : new Date(
+          now.getFullYear(),
+          now.getMonth(),
+          now.getDate(),
+          23,
+          59,
+          59,
+          999
+        );
+
+    const entries = await Time.aggregate([
+      {
+        $match: {
+          inTime: {
+            $gte: start,
+            $lte: end,
+          },
+          workingHours: { $ne: null },
+        },
+      },
+      {
+        $project: {
+          userId: 1,
+          workingHours: 1,
+          dateString: {
+            $dateToString: { format: "%Y-%m-%d", date: "$inTime" },
+          },
+        },
+      },
+      {
+        $addFields: {
+          // Convert workingHours ("HH:mm:ss") to total seconds
+          totalSeconds: {
+            $let: {
+              vars: {
+                parts: { $split: ["$workingHours", ":"] },
+              },
+              in: {
+                $add: [
+                  {
+                    $multiply: [
+                      { $toInt: { $arrayElemAt: ["$$parts", 0] } },
+                      3600,
+                    ],
+                  },
+                  {
+                    $multiply: [
+                      { $toInt: { $arrayElemAt: ["$$parts", 1] } },
+                      60,
+                    ],
+                  },
+                  { $toInt: { $arrayElemAt: ["$$parts", 2] } },
+                ],
+              },
+            },
+          },
+        },
+      },
+      {
+        $group: {
+          _id: { userId: "$userId", date: "$dateString" },
+          totalSeconds: { $sum: "$totalSeconds" },
+        },
+      },
+      {
+        $project: {
+          userId: "$_id.userId",
+          dateString: "$_id.date",
+          totalSeconds: 1,
+          workingHours: {
+            $let: {
+              vars: {
+                hours: { $floor: { $divide: ["$totalSeconds", 3600] } },
+                minutes: {
+                  $mod: [{ $floor: { $divide: ["$totalSeconds", 60] } }, 60],
+                },
+                seconds: { $mod: ["$totalSeconds", 60] },
+              },
+              in: {
+                $concat: [
+                  {
+                    $toString: {
+                      $cond: [
+                        { $lt: ["$$hours", 10] },
+                        { $concat: ["0", { $toString: "$$hours" }] },
+                        "$$hours",
+                      ],
+                    },
+                  },
+                  ":",
+                  {
+                    $toString: {
+                      $cond: [
+                        { $lt: ["$$minutes", 10] },
+                        { $concat: ["0", { $toString: "$$minutes" }] },
+                        "$$minutes",
+                      ],
+                    },
+                  },
+                  ":",
+                  {
+                    $toString: {
+                      $cond: [
+                        { $lt: ["$$seconds", 10] },
+                        { $concat: ["0", { $toString: "$$seconds" }] },
+                        "$$seconds",
+                      ],
+                    },
+                  },
+                ],
+              },
+            },
+          },
+        },
+      },
+      { $sort: { userId: 1, dateString: 1 } },
+    ]);
+
+    res.status(200).json(entries);
+  } catch (error) {
+    next(error);
+  }
+};
+
+// PUT /api/time/update/attendance-status/:id
+export const updateAttendanceStatus = async (
+  req: Request,
+  res: Response,
+  next: NextFunction
+): Promise<any | void> => {
+  try {
+    const { id } = req.params;
+    const { attendanceStatus } = req.body;
+
+    if (!attendanceStatus) {
+      return res.status(400).json({ message: "attendanceStatus is required." });
+    }
+
+    const validStatuses: AttendanceStatus[] = ["absent", "half_day", "full_day"];
+    if (!validStatuses.includes(attendanceStatus)) {
+      return res.status(400).json({ message: "Invalid attendance status." });
+    }
+
+    const entry = await Time.findById(id);
+    if (!entry) return res.status(404).json({ message: "Entry not found." });
+
+    // Check if the entry is already clocked out then you can update the attendance status
+    if (entry.status !== "clocked_out" && entry.outTime) {
+      return res.status(400).json({
+        message: "Entry must be clocked out to update attendance status.",
+      });
+    }
+
+    entry.attendanceStatus = attendanceStatus;
+    await entry.save();
+
+    res.status(200).json(entry);
+  } catch (error) {
+    next(error);
+  }
+}
