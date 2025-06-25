@@ -477,14 +477,16 @@ const Dashboard: React.FC = () => {
                             return timeA - timeB;
                           });
 
-                        let trackerStatus = "Clocked Out";
-                        if (userEntries.length > 0) {
-                          const latest = userEntries[userEntries.length - 1];
-                          if (latest.status === "clocked_in")
-                            trackerStatus = "Clocked In";
-                          else if (latest.status === "clocked_out_for_break")
-                            trackerStatus = "On Break";
-                        }
+                          let trackerStatus = "Not Clocked In";
+                          if (userEntries.length > 0) {
+                            const latest = userEntries[userEntries.length - 1];
+                            if (latest.status === "clocked_in")
+                              trackerStatus = "Clocked In";
+                            else if (latest.status === "clocked_out_for_break")
+                              trackerStatus = "On Break";
+                            else if (latest.status === "clocked_out")
+                              trackerStatus = "Clocked Out";
+                          }
 
                         let totalLoggedSeconds = 0;
                         userEntries.forEach((entry, _i) => {
