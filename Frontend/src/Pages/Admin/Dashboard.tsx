@@ -940,7 +940,7 @@ const Dashboard: React.FC = () => {
       {/* User Status Modal */}
       <Modal isOpen={showStatusModal} onClose={closeStatusModal}>
         {statusUser && (
-          <div className="relative bg-white rounded-xl shadow-xl max-w-md w-full mx-4 transform transition-all duration-300">
+          <div className="relative bg-white rounded-xl shadow-xl max-w-md w-full mx-4 transform transition-all duration-300 mx-auto">
             <div className="flex items-center justify-between p-4 border-b border-gray-200">
               <h3 className="text-xl font-semibold text-gray-800">
                 Manage User Account
