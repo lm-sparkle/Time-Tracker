@@ -161,7 +161,7 @@ const Attendance: React.FC = () => {
   const fetchUsers = async () => {
     setLoading(true);
     try {
-      const response = await api.get(`/users`, {
+      const response = await api.get(`/users/all`, {
         headers: {
           Authorization: `Bearer ${sessionStorage.getItem("token")}`,
         },

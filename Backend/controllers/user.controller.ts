@@ -29,6 +29,20 @@ export const getAllUsers = async (
   }
 };
 
+// GET /api/users
+export const getUsers = async (
+  req: Request,
+  res: Response,
+  next: NextFunction
+) => {
+  try {
+    const users = await User.find().select("-password");
+    res.status(200).json(users);
+  } catch (error) {
+    next(error);
+  }
+};
+
 // GET /api/users/:id
 export const getUserById = async (
   req: Request,
