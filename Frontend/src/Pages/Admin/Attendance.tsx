@@ -166,7 +166,7 @@ const Attendance: React.FC = () => {
           Authorization: `Bearer ${sessionStorage.getItem("token")}`,
         },
       });
-      setUsers(response.data.users);
+      setUsers(response.data);
     } catch (error) {
       Toast.fire({
         icon: "error",
