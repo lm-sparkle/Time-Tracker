@@ -15,6 +15,7 @@ import {
   FaClock,
   FaExclamationTriangle,
   FaHamburger,
+  FaSpinner,
 } from "react-icons/fa";
 import { useAuth } from "../../Auth/AuthContext";
 import Modal from "../../Components/Modal";
@@ -69,6 +70,7 @@ const HomePage: React.FC = () => {
   const [subject, setSubject] = useState<string>();
   const [message, setMessage] = useState<string>();
   const modalRef = useRef<HTMLDivElement>(null);
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   if (user) {
     sessionStorage.setItem("userId", user.id);
@@ -379,6 +381,7 @@ const HomePage: React.FC = () => {
 
   const handleSubmit = async (e: FormEvent) => {
     e.preventDefault();
+    setIsSubmitting(true);
     try {
       if (!(status === "clocked_in" || status === "clocked_out_for_break"))
         return;
@@ -415,6 +418,8 @@ const HomePage: React.FC = () => {
       fetchUserTimes();
     } catch (err) {
       console.error(err);
+    } finally {
+      setIsSubmitting(false);
     }
   };
 
@@ -778,11 +783,21 @@ const HomePage: React.FC = () => {
                   />
                 </div>
                 <div className="flex justify-end space-x-3 pt-4">
-                  <button
+                <button
                     type="submit"
-                    className="px-6 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 transition flex items-center"
+                    className="px-6 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 transition flex items-center disabled:opacity-50 disabled:cursor-not-allowed"
+                    disabled={isSubmitting}
                   >
-                    <FaPaperPlane className="mr-2" /> Send Update
+                    {isSubmitting ? (
+                      <>
+                        <FaSpinner className="animate-spin mr-2" />
+                        Sending...
+                      </>
+                    ) : (
+                      <>
+                        <FaPaperPlane className="mr-2" /> Send Update
+                      </>
+                    )}
                   </button>
                 </div>
               </form>
