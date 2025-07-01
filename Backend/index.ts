@@ -44,7 +44,7 @@ app.get("/", (req: Request, res: Response) => {
     "Welcome to the Time Tracker API Server! Your backend is running smoothly. Access the API endpoints at /api."
   );
 });
-app.use("/api", ipRestrict, loginRouter);
+app.use("/api", loginRouter);
 app.use("/api", authenticateJWT, ipRestrict, registerRouter);
 app.use("/api/users", authenticateJWT, ipRestrict, userRouter);
 app.use("/api/time", authenticateJWT, ipRestrict, timeRouter);
