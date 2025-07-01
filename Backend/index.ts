@@ -7,6 +7,7 @@ dotenv.config();
 
 import { authenticateJWT } from "./middlewares/auth.middleware";
 import { ipRestrict } from "./middlewares/ip.middleware"
+import { conditionalIpRestrict } from "./middlewares/conditionalIp.middleware";
 
 import connectDB from "./libs/connectDB";
 import registerRouter from "./routers/register.route";
@@ -44,11 +45,11 @@ app.get("/", (req: Request, res: Response) => {
     "Welcome to the Time Tracker API Server! Your backend is running smoothly. Access the API endpoints at /api."
   );
 });
-app.use("/api", ipRestrict, loginRouter);
-app.use("/api", authenticateJWT, ipRestrict, registerRouter);
-app.use("/api/users", authenticateJWT, ipRestrict, userRouter);
-app.use("/api/time", authenticateJWT, ipRestrict, timeRouter);
-app.use("/api/status", authenticateJWT, ipRestrict, statusRouter);
+app.use("/api", conditionalIpRestrict, loginRouter);
+app.use("/api", authenticateJWT, conditionalIpRestrict, registerRouter);
+app.use("/api/users", authenticateJWT, conditionalIpRestrict, userRouter);
+app.use("/api/time", authenticateJWT, conditionalIpRestrict, timeRouter);
+app.use("/api/status", authenticateJWT, conditionalIpRestrict, statusRouter);
 
 app.listen(PORT, () => {
   console.log(`Server is running on port ${PORT}`);
