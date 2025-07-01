@@ -6,6 +6,8 @@ const BYPASS_EMAIL = process.env.BYPASS_EMAIL;
 export function ipRestrict(req: Request, res: Response, next: NextFunction) {
   const userBody = req.body?.email;
   const user = (req as any).user?.email;
+  console.log("userBody:", userBody);
+  console.log("user:", user);
 
   // Bypass IP check if email matches
   if (userBody === BYPASS_EMAIL) {
