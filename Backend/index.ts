@@ -5,6 +5,7 @@ import { Request, Response } from "express";
 import dotenv from "dotenv";
 dotenv.config();
 
+import { authenticateJWT } from "./middlewares/auth.middleware";
 import { ipRestrict } from "./middlewares/ip.middleware"
 
 import connectDB from "./libs/connectDB";
@@ -43,11 +44,11 @@ app.get("/", (req: Request, res: Response) => {
     "Welcome to the Time Tracker API Server! Your backend is running smoothly. Access the API endpoints at /api."
   );
 });
-app.use("/api", ipRestrict, registerRouter);
 app.use("/api", ipRestrict, loginRouter);
-app.use("/api/users", ipRestrict, userRouter);
-app.use("/api/time", ipRestrict, timeRouter);
-app.use("/api/status", ipRestrict, statusRouter);
+app.use("/api", authenticateJWT, ipRestrict, registerRouter);
+app.use("/api/users", authenticateJWT, ipRestrict, userRouter);
+app.use("/api/time", authenticateJWT, ipRestrict, timeRouter);
+app.use("/api/status", authenticateJWT, ipRestrict, statusRouter);
 
 app.listen(PORT, () => {
   console.log(`Server is running on port ${PORT}`);

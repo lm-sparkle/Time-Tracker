@@ -4,12 +4,11 @@ import {
   getStatusMailInfo,
   getStatus
 } from "../controllers/status.controller";
-import { authenticateJWT } from "../middlewares/auth.middleware";
 
 const router = Router();
 
-router.post("/send-update",authenticateJWT, sendStatusUpdate);
-router.get("/mail-info",authenticateJWT, getStatusMailInfo);
-router.get("/all-status", authenticateJWT, getStatus);
+router.post("/send-update", sendStatusUpdate);
+router.get("/mail-info", getStatusMailInfo);
+router.get("/all-status",  getStatus);
 
 export default router;
