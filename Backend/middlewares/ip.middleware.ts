@@ -6,20 +6,20 @@ const BYPASS_EMAIL = process.env.BYPASS_EMAIL;
 export function ipRestrict(req: Request, res: Response, next: NextFunction) {
   try {
     const userEmail =
-      (req as any).user?.email || // after login (authenticated)
-      req.body?.email ||          // during login/register
-      req.query?.email ||         // optional: GET requests
-      req.headers['x-email'];     // optional: custom header
+      (req as any).user?.email || 
+      req.body?.email ||         
+      req.query?.email ||         
+      req.headers['x-email'];    
 
     if (userEmail && userEmail === BYPASS_EMAIL) {
-      return next(); // bypass based on email
+      return next(); 
     }
 
     const forwarded = req.headers['x-forwarded-for'] as string | undefined;
     const clientIp = forwarded ? forwarded.split(',')[0].trim() : req.socket.remoteAddress;
 
     if (clientIp === ALLOWED_IP || clientIp === `::ffff:${ALLOWED_IP}`) {
-      return next(); // allow if IP matches
+      return next();
     }
 
     res.status(403).send('Access denied: Your IP is not allowed.');
