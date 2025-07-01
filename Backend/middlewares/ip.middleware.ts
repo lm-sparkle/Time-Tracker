@@ -22,11 +22,9 @@ export function ipRestrict(req: Request, res: Response, next: NextFunction) {
       return next();
     }
 
-    res.status(403).send('Access denied: Your IP is not allowed.');
+    return res.status(403).send('Access denied: Your IP is not allowed.');
   } catch (error) {
     console.error('IP Restriction Error:', error);
-    res.status(500).send('Internal Server Error');
+    return res.status(500).send('Internal Server Error');
   }
-
-  res.status(403).send('Access denied: Your IP is not allowed.');
 }
