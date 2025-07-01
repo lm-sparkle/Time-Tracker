@@ -45,11 +45,11 @@ app.get("/", (req: Request, res: Response) => {
     "Welcome to the Time Tracker API Server! Your backend is running smoothly. Access the API endpoints at /api."
   );
 });
-app.use("/api", conditionalIpRestrict, loginRouter);
-app.use("/api", authenticateJWT, conditionalIpRestrict, registerRouter);
-app.use("/api/users", authenticateJWT, conditionalIpRestrict, userRouter);
-app.use("/api/time", authenticateJWT, conditionalIpRestrict, timeRouter);
-app.use("/api/status", authenticateJWT, conditionalIpRestrict, statusRouter);
+app.use("/api",  loginRouter);
+app.use("/api", authenticateJWT,  registerRouter);
+app.use("/api/users", authenticateJWT,  userRouter);
+app.use("/api/time", authenticateJWT,  timeRouter);
+app.use("/api/status", authenticateJWT,  statusRouter);
 
 app.listen(PORT, () => {
   console.log(`Server is running on port ${PORT}`);
