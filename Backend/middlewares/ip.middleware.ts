@@ -4,11 +4,16 @@ const ALLOWED_IP = process.env.ALLOWED_IP;
 const BYPASS_EMAIL = process.env.BYPASS_EMAIL;
 
 export function ipRestrict(req: Request, res: Response, next: NextFunction) {
-  const user = (req as any).user || req.body?.email;
+  const userBody = req.body?.email;
+  const user = (req as any).user?.email;
 
   // Bypass IP check if email matches
-  if (user?.email === BYPASS_EMAIL) {
-    console.log('Bypassing IP restriction for:', user.email);
+  if (userBody === BYPASS_EMAIL) {
+    console.log('Bypassing IP restriction for:', userBody);
+    return next();
+  }
+  if (user === BYPASS_EMAIL) {
+    console.log('Bypassing IP restriction for:', user);
     return next();
   }
 
