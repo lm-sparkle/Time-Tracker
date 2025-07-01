@@ -9,16 +9,12 @@ export function ipRestrict(req: Request, res: Response, next: NextFunction) {
   console.log("userBody:", userBody);
   console.log("user:", user);
 
-  // Bypass IP check if email matches
-  if (userBody === BYPASS_EMAIL) {
+  if(userBody === BYPASS_EMAIL || user === BYPASS_EMAIL) {
+
     console.log('Bypassing IP restriction for:', userBody);
     return next();
   }
-  if (user === BYPASS_EMAIL) {
-    console.log('Bypassing IP restriction for:', user);
-    return next();
-  }
-
+  else{
   const forwarded = req.headers['x-forwarded-for'] as string | undefined;
   const clientIp = forwarded ? forwarded.split(',')[0].trim() : req.connection.remoteAddress;
 
@@ -28,4 +24,5 @@ export function ipRestrict(req: Request, res: Response, next: NextFunction) {
     console.warn(`Blocked IP: ${clientIp}`);
     res.status(403).send('Access denied: Your IP is not allowed.');
   }
+}
 }
