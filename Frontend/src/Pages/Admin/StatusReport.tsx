@@ -119,12 +119,12 @@ export default function StatusReport() {
 
   const fetchUsers = async () => {
     try {
-      const response = await api.get(`/users`, {
+      const response = await api.get(`/users/all`, {
         headers: {
           Authorization: `Bearer ${sessionStorage.getItem("token")}`,
         },
       });
-      setUsers(response.data.users);
+      setUsers(response.data);
     } catch (error) {
       Toast.fire({
         icon: "error",

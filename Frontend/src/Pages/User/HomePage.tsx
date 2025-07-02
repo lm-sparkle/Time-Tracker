@@ -72,6 +72,13 @@ const HomePage: React.FC = () => {
   const modalRef = useRef<HTMLDivElement>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
+  const [isClockInLoading, setIsClockInLoading] = useState(false);
+  const [isClockOutLoading, setIsClockOutLoading] = useState(false);
+
+  const [loggedTimeAnim, setLoggedTimeAnim] = useState(false);
+  const [breakTimeAnim, setBreakTimeAnim] = useState(false);
+  const [trackerStatusAnim, setTrackerStatusAnim] = useState(false); // "in" | "out" | ""
+
   if (user) {
     sessionStorage.setItem("userId", user.id);
   }
@@ -188,6 +195,7 @@ const HomePage: React.FC = () => {
   };
 
   const handleClockIn = async () => {
+    setIsClockInLoading(true);
     try {
       if (status === "not_clocked_in" || status === "clocked_out_for_break") {
         const res = await api.post(
@@ -201,6 +209,10 @@ const HomePage: React.FC = () => {
             },
           }
         );
+        setLoggedTimeAnim(true);
+        setTrackerStatusAnim(true);
+        setTimeout(() => setLoggedTimeAnim(false), 1000);
+        setTimeout(() => setTrackerStatusAnim(false), 1000);
         setCurrentEntryId(res.data._id);
         sessionStorage.setItem("time_Id", res.data._id);
         setInTime(new Date(res.data.inTime));
@@ -210,26 +222,39 @@ const HomePage: React.FC = () => {
       }
     } catch (err) {
       console.error(err);
+    } finally {
+      setIsClockInLoading(false);
     }
   };
 
   const handleClockOut = async () => {
-    if (status !== "clocked_in") return;
-    const response = await api.put(
-      `${import.meta.env.VITE_API_URL}time/clock-out/${sessionStorage.getItem(
-        "time_Id"
-      )}`,
-      {},
-      {
-        headers: {
-          Authorization: `Bearer ${sessionStorage.getItem("token")}`,
-        },
-      }
-    );
-    setOutTime(new Date(response?.data?.outTime));
-    setStatus(response?.data?.status);
-    fetchUserLatestTime();
-    fetchUserTimes();
+    setIsClockOutLoading(true);
+    try {
+      if (status !== "clocked_in") return;
+      const response = await api.put(
+        `${import.meta.env.VITE_API_URL}time/clock-out/${sessionStorage.getItem(
+          "time_Id"
+        )}`,
+        {},
+        {
+          headers: {
+            Authorization: `Bearer ${sessionStorage.getItem("token")}`,
+          },
+        }
+      );
+      setBreakTimeAnim(true);
+      setTrackerStatusAnim(true);
+      setTimeout(() => setBreakTimeAnim(false), 1000);
+      setTimeout(() => setTrackerStatusAnim(false), 1000);
+      setOutTime(new Date(response?.data?.outTime));
+      setStatus(response?.data?.status);
+      fetchUserLatestTime();
+      fetchUserTimes();
+    } catch (err) {
+      console.error(err);
+    } finally {
+      setIsClockOutLoading(false);
+    }
   };
 
   const timeToSeconds = (timeStr: string) => {
@@ -440,7 +465,10 @@ const HomePage: React.FC = () => {
           {/* Time Cards */}
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
             {/* Current Status */}
-            <div className="bg-white overflow-hidden shadow rounded-lg">
+            <div
+              className={`bg-white overflow-hidden shadow rounded-lg transition 
+    ${trackerStatusAnim ? " animated-ring-status" : ""}`}
+            >
               <div className="px-4 py-5 sm:p-6">
                 <div className="flex items-center">
                   <div className="flex-shrink-0 bg-indigo-100 rounded-md p-3">
@@ -460,7 +488,10 @@ const HomePage: React.FC = () => {
               </div>
             </div>
             {/* Total Hours Today */}
-            <div className="bg-white overflow-hidden shadow rounded-lg">
+            <div
+              className={`bg-white overflow-hidden shadow rounded-lg transition 
+    ${loggedTimeAnim ? " animated-ring-in" : ""}`}
+            >
               <div className="px-4 py-5 sm:p-6">
                 <div className="flex items-center">
                   <div className="flex-shrink-0 bg-green-100 rounded-md p-3">
@@ -488,7 +519,10 @@ const HomePage: React.FC = () => {
               </div>
             </div>
             {/* Total Break Today */}
-            <div className="bg-white overflow-hidden shadow rounded-lg">
+            <div
+              className={`bg-white overflow-hidden shadow rounded-lg transition 
+    ${breakTimeAnim ? " animated-ring-out" : ""}`}
+            >
               <div className="px-4 py-5 sm:p-6">
                 <div className="flex items-center">
                   <div className="flex-shrink-0 bg-yellow-100 rounded-md p-3">
@@ -517,69 +551,89 @@ const HomePage: React.FC = () => {
             <button
               onClick={handleClockIn}
               disabled={
+                isClockInLoading ||
                 !(
                   status === "not_clocked_in" ||
                   status === "clocked_out_for_break"
                 )
               }
               className={`time-card bg-white overflow-hidden shadow rounded-lg text-left ${
-                status === "not_clocked_in" ||
-                status === "clocked_out_for_break"
+                (status === "not_clocked_in" ||
+                  status === "clocked_out_for_break") &&
+                !isClockInLoading
                   ? "cursor-pointer hover:shadow-lg transition-shadow"
                   : "opacity-50 cursor-not-allowed"
               }`}
             >
-              <div className="px-4 py-5 sm:p-6 text-center">
-                <div className="mx-auto flex-shrink-0 flex items-center justify-center h-12 w-12 rounded-full bg-green-100">
-                  <FaSignInAlt className="text-green-600 text-xl" />
-                </div>
-                <h3 className="mt-3 text-lg font-medium text-gray-900 space-x-2 gap-2 flex items-center justify-center">
-                  Clock In
-                  <span className="inline-flex items-center rounded-full bg-green-50 px-2 py-1 text-xs font-medium text-green-700 ring-1 ring-green-600/20 ring-inset">
-                    <FaTimes className="mr-1" />
-                    <span className="text-base">
-                      {clockInCount > 0 ? clockInCount : "0"}
-                    </span>
-                  </span>
-                </h3>
-                <p className="mt-1 text-sm text-gray-500">Start your workday</p>
-                <div className="mt-4 text-2xl font-semibold text-gray-900">
-                  {userLatestTime[0]?.inTime
-                    ? new Date(userLatestTime[0]?.inTime).toLocaleTimeString()
-                    : "--:--:--"}
-                </div>
+              <div className="px-4 py-5 sm:p-6 text-center h-full">
+                {isClockInLoading ? (
+                  <FaSpinner className="animate-spin text-2xl text-green-600 mx-auto" />
+                ) : (
+                  <>
+                    <div className="mx-auto flex-shrink-0 flex items-center justify-center h-12 w-12 rounded-full bg-green-100">
+                      <FaSignInAlt className="text-green-600 text-xl" />
+                    </div>
+                    <h3 className="mt-3 text-lg font-medium text-gray-900 space-x-2 gap-2 flex items-center justify-center">
+                      Clock In
+                      <span className="inline-flex items-center rounded-full bg-green-50 px-2 py-1 text-xs font-medium text-green-700 ring-1 ring-green-600/20 ring-inset">
+                        <FaTimes className="mr-1" />
+                        <span className="text-base">
+                          {clockInCount > 0 ? clockInCount : "0"}
+                        </span>
+                      </span>
+                    </h3>
+                    <p className="mt-1 text-sm text-gray-500">
+                      Start your workday
+                    </p>
+                    <div className="mt-4 text-2xl font-semibold text-gray-900">
+                      {userLatestTime[0]?.inTime
+                        ? new Date(
+                            userLatestTime[0]?.inTime
+                          ).toLocaleTimeString()
+                        : "--:--:--"}
+                    </div>
+                  </>
+                )}
               </div>
             </button>
 
             {/* Out Time */}
             <button
               onClick={handleClockOut}
-              disabled={status !== "clocked_in"}
+              disabled={status !== "clocked_in" || isClockOutLoading}
               className={`time-card bg-white overflow-hidden shadow rounded-lg text-left ${
-                status === "clocked_in"
+                status === "clocked_in" && !isClockOutLoading
                   ? "cursor-pointer hover:shadow-lg transition-shadow"
                   : "opacity-50 cursor-not-allowed"
               }`}
             >
-              <div className="px-4 py-5 sm:p-6 text-center">
-                <div className="mx-auto flex-shrink-0 flex items-center justify-center h-12 w-12 rounded-full bg-yellow-100">
-                  <FaSignOutAlt className="text-yellow-600 text-xl" />
-                </div>
-                <h3 className="mt-3 text-lg font-medium text-gray-900 space-x-2 gap-2 flex items-center justify-center">
-                  Clock Out
-                  <span className="inline-flex items-center rounded-md bg-yellow-50 px-2 py-1 text-xs font-medium text-yellow-800 ring-1 ring-yellow-600/20 ring-inset">
-                    <FaTimes className="mr-1" />
-                    <span className="text-base">
-                      {clockOutCount > 0 ? clockOutCount : "0"}
-                    </span>
-                  </span>
-                </h3>
-                <p className="mt-1 text-sm text-gray-500">Take a break</p>
-                <div className="mt-4 text-2xl font-semibold text-gray-900">
-                  {userLatestTime[0]?.outTime
-                    ? new Date(userLatestTime[0]?.outTime).toLocaleTimeString()
-                    : "--:--:--"}
-                </div>
+              <div className="px-4 py-5 sm:p-6 text-center h-full">
+                {isClockOutLoading ? (
+                  <FaSpinner className="animate-spin text-2xl text-yellow-600 mx-auto" />
+                ) : (
+                  <>
+                    <div className="mx-auto flex-shrink-0 flex items-center justify-center h-12 w-12 rounded-full bg-yellow-100">
+                      <FaSignOutAlt className="text-yellow-600 text-xl" />
+                    </div>
+                    <h3 className="mt-3 text-lg font-medium text-gray-900 space-x-2 gap-2 flex items-center justify-center">
+                      Clock Out
+                      <span className="inline-flex items-center rounded-md bg-yellow-50 px-2 py-1 text-xs font-medium text-yellow-800 ring-1 ring-yellow-600/20 ring-inset">
+                        <FaTimes className="mr-1" />
+                        <span className="text-base">
+                          {clockOutCount > 0 ? clockOutCount : "0"}
+                        </span>
+                      </span>
+                    </h3>
+                    <p className="mt-1 text-sm text-gray-500">Take a break</p>
+                    <div className="mt-4 text-2xl font-semibold text-gray-900">
+                      {userLatestTime[0]?.outTime
+                        ? new Date(
+                            userLatestTime[0]?.outTime
+                          ).toLocaleTimeString()
+                        : "--:--:--"}
+                    </div>
+                  </>
+                )}
               </div>
             </button>
 
@@ -783,7 +837,7 @@ const HomePage: React.FC = () => {
                   />
                 </div>
                 <div className="flex justify-end space-x-3 pt-4">
-                <button
+                  <button
                     type="submit"
                     className="px-6 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 transition flex items-center disabled:opacity-50 disabled:cursor-not-allowed"
                     disabled={isSubmitting}

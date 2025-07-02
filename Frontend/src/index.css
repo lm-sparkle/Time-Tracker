@@ -3,3 +3,30 @@
 body{
   background-color: rgb(247, 247, 236);
 }
+
+@keyframes ring-flash-status {
+  0%, 100% { box-shadow: 0 0 0 0 oklch(87% 0.065 274.039); }
+  50% { box-shadow: 0 0 0 16px oklch(93% 0.034 272.788); }
+}
+
+.animated-ring-status {
+  animation: ring-flash-status 2s ease;
+}
+
+@keyframes ring-flash-in {
+  0%, 100% { box-shadow: 0 0 0 0 rgba(116, 241, 99, 0.7); }
+  50% { box-shadow: 0 0 0 16px rgba(116, 241, 99, 0.4); }
+}
+
+.animated-ring-in {
+  animation: ring-flash-in 2s ease;
+}
+
+@keyframes ring-flash-out {
+  0%, 100% { box-shadow: 0 0 0 0 oklch(89.622% 0.08366 103.501); }
+  50% { box-shadow: 0 0 0 16px oklch(97.3% 0.071 103.193); }
+}
+
+.animated-ring-out {
+  animation: ring-flash-out 2s ease;
+}
