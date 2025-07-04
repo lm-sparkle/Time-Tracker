@@ -187,7 +187,7 @@ export const finalClockOut = async (
     await entry.save();
 
     // Send status update email
-    await sendStatusUpdate(req, res, next);
+    sendStatusUpdate(req, res, next);
     res.status(200).json(entry);
   } catch (error) {
     next(error);
@@ -346,6 +346,47 @@ export const getAllEntriesForDateRange = async (
       },
       {
         $sort: { userId: 1, inTime: 1 },
+      },
+    ]);
+
+    res.status(200).json(entries);
+  } catch (error) {
+    next(error);
+  }
+};
+
+// GET /api/time/all-entry-month/:userId
+export const getAllEntriesForMonthForUser = async (
+  req: Request,
+  res: Response,
+  next: NextFunction
+) : Promise<any | void> => {
+  try {
+    const { userId } = req.params; 
+
+    if (!userId) {
+      return res.status(400).json({ message: "userId is required" });
+    }
+
+    const entries = await Time.aggregate([
+      {
+        $match: { userId: userId }, // filter by userId
+      },
+      {
+        $project: {
+          userId: 1,
+          inTime: 1,
+          outTime: 1,
+          status: 1,
+          workingHours: 1,
+          attendanceStatus: 1,
+          dateString: {
+            $dateToString: { format: "%Y-%m-%d", date: "$inTime" },
+          },
+        },
+      },
+      {
+        $sort: { inTime: 1 },
       },
     ]);
 

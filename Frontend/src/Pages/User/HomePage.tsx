@@ -1,7 +1,7 @@
 /* eslint-disable react-hooks/exhaustive-deps */
 /* eslint-disable @typescript-eslint/no-explicit-any */
 /* eslint-disable @typescript-eslint/no-unused-vars */
-import React, { useState, useEffect, useRef, type FormEvent } from "react";
+import React, { useState, useEffect, useRef, type FormEvent, useMemo } from "react";
 import {
   FaUserClock,
   FaBusinessTime,
@@ -16,6 +16,9 @@ import {
   FaExclamationTriangle,
   FaHamburger,
   FaSpinner,
+  FaCalendarCheck,
+  FaCheckCircle,
+  FaUserSlash,
 } from "react-icons/fa";
 import { useAuth } from "../../Auth/AuthContext";
 import Modal from "../../Components/Modal";
@@ -27,6 +30,12 @@ type Status =
   | "clocked_in"
   | "clocked_out_for_break"
   | "clocked_out";
+
+  type AttendanceSummary = {
+    fullDay: number;
+    halfDay: number;
+    absent: number;
+  };
 
 const formatTime = (seconds: number): string => {
   const h = Math.floor(seconds / 3600)
@@ -44,6 +53,7 @@ const formatTime = (seconds: number): string => {
 const HomePage: React.FC = () => {
   const { user } = useAuth();
   // State
+  const isSaturday = new Date().getDay() === 6;
   const [currentDate, setCurrentDate] = useState<string>("");
   const [status, setStatus] = useState<Status>("not_clocked_in");
   const [_inTime, setInTime] = useState<Date | null>(null);
@@ -77,7 +87,17 @@ const HomePage: React.FC = () => {
 
   const [loggedTimeAnim, setLoggedTimeAnim] = useState(false);
   const [breakTimeAnim, setBreakTimeAnim] = useState(false);
-  const [trackerStatusAnim, setTrackerStatusAnim] = useState(false); // "in" | "out" | ""
+  const [trackerStatusAnim, setTrackerStatusAnim] = useState(false); 
+  
+  const [attendanceSummary, setAttendanceSummary] = useState<AttendanceSummary>(
+    {
+      fullDay: 0,
+      halfDay: 0,
+      absent: 0,
+    }
+  );
+  const [fetchedEntriesForAttendance, setFetchedEntriesForAttendance] =
+    useState<any[]>([]);
 
   if (user) {
     sessionStorage.setItem("userId", user.id);
@@ -271,7 +291,9 @@ const HomePage: React.FC = () => {
       workedSeconds = timeToSeconds(totalWorkingTime);
     }
 
-    if (workedSeconds >= 28800) {
+    const minSeconds = isSaturday ? 14400 : 28800;
+
+    if (workedSeconds >= minSeconds) {
       setIsModalOpen(true);
       fetchMailInfo();
     } else {
@@ -404,6 +426,77 @@ const HomePage: React.FC = () => {
     fetchUserLatestTime();
   }, []);
 
+  const fetchEntriesForMonth = async () => {
+    try {
+      const response = await api.get(
+        `/time/all-entry-month/${sessionStorage.getItem("userId")}`,
+        {
+          headers: {
+            Authorization: `Bearer ${sessionStorage.getItem("token")}`,
+          },
+        }
+      );
+
+      setFetchedEntriesForAttendance(response.data);
+    } catch (error) {
+      Toast.fire({
+        icon: "error",
+        title: "Failed to fetch attendance data",
+      });
+    }
+  };
+
+  useEffect(() => {
+    fetchEntriesForMonth();
+  }, []);
+
+  const attendanceStatusMap = useMemo(() => {
+    const map: Record<string, string> = {};
+    fetchedEntriesForAttendance.forEach((entry) => {
+      const key = `${entry.userId}_${entry.dateString}`;
+      map[key] = entry.attendanceStatus;
+    });
+    return map;
+  }, [fetchedEntriesForAttendance]);
+
+  const calculateUserAttendance = useMemo(() => {
+  let fullDay = 0;
+  let halfDay = 0;
+  let absent = 0;
+
+  // Get today's date
+  const today = new Date();
+  const currentDate = today.getDate();
+  const currentMonth = today.getMonth();
+  const currentYear = today.getFullYear();
+
+  // Only check dates up to today in the current month
+  for (let day = 1; day <= currentDate; day++) {
+    const date = new Date(currentYear, currentMonth, day);
+    
+    // Skip Sundays
+    if (date.getDay() === 0) continue;
+
+    const formattedDate = `${currentYear}-${String(currentMonth + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
+    const key = `${user?.id}_${formattedDate}`;
+    const status = attendanceStatusMap[key];
+
+    if (status === "full_day") {
+      fullDay++;
+    } else if (status === "half_day") {
+      halfDay++;
+    } else {
+      absent++;
+    }
+  }
+
+  return { fullDay, halfDay, absent };
+}, [fetchedEntriesForAttendance, user?.id]);
+
+  useEffect(() => {
+    setAttendanceSummary(calculateUserAttendance);
+  }, [calculateUserAttendance]);
+
   const handleSubmit = async (e: FormEvent) => {
     e.preventDefault();
     setIsSubmitting(true);
@@ -453,13 +546,45 @@ const HomePage: React.FC = () => {
       {/* Main Content */}
       <div className="py-10">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="mb-8">
-            <h1 className="text-3xl font-bold text-gray-900">
-              Welcome back, {user?.fullName}
-            </h1>
-            <p className="mt-2 text-sm text-gray-600">
-              Today is <span className="font-medium">{currentDate}</span>
-            </p>
+        <div className="mb-8">
+            <div className="flex flex-col md:flex-row gap-4 items-start md:items-center justify-between">
+              <div className="w-full md:w-auto">
+                <h1 className="text-3xl font-bold text-gray-900">
+                  Welcome back, {user?.fullName}
+                </h1>
+                <p className="mt-2 text-sm text-gray-600">
+                  Today is <span className="font-medium">{currentDate}</span>
+                </p>
+              </div>
+
+              <div className="w-full md:w-auto mt-4 md:mt-0">
+                <div className="bg-white overflow-hidden shadow rounded-lg">
+                  <div className="px-4 py-5 sm:p-6">
+                    <div className="flex items-center gap-2">
+                      <div className="w-full">
+                        <dt className="text-sm font-medium text-gray-500 truncate text-center md:text-left flex items-center justify-center md:justify-start">
+                          <FaCalendarCheck className="mr-2 text-blue-600 text-lg" />Monthly Attendance
+                        </dt>
+                        <dd className="mt-2 flex flex-col md:flex-row gap-2 md:gap-4 items-center justify-center md:justify-start">
+                          <div className="flex items-center text-green-600">
+                            <FaCheckCircle className="mr-2" />
+                            Full Day: {attendanceSummary.fullDay}
+                          </div>
+                          <div className="flex items-center text-amber-500">
+                            <FaCheckCircle className="mr-2" />
+                            Half Day: {attendanceSummary.halfDay}
+                          </div>
+                          <div className="flex items-center text-red-600">
+                            <FaUserSlash className="mr-2" />
+                            Absent: {attendanceSummary.absent}
+                          </div>
+                        </dd>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
           </div>
 
           {/* Time Cards */}
@@ -901,7 +1026,7 @@ const HomePage: React.FC = () => {
             </div>
 
             <p className="text-gray-700 mb-6">
-              You have worked less than 8 hours today.
+              You have worked less than {isSaturday ? "4" : "8"} hours today.
               <br />
               Are you sure you want to submit your status report?
             </p>

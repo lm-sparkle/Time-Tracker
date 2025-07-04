@@ -7,7 +7,8 @@ import {
   getUserLatestEntry,
   getUserTimeEntries,
   getAllEntriesForDateRange,
-  updateAttendanceStatus
+  updateAttendanceStatus,
+  getAllEntriesForMonthForUser
 } from "../controllers/time.controller";
 
 const router = Router();
@@ -19,6 +20,7 @@ router.get("/userTime", getTimeEntries);
 router.get("/user/:userId", getUserTimeEntries);
 router.get("/user/latest/:userId", getUserLatestEntry);
 router.get("/all-entry-month", getAllEntriesForDateRange);
+router.get("/all-entry-month/:userId", getAllEntriesForMonthForUser);
 router.put("/update/attendance-status/:id", updateAttendanceStatus);
 
 
