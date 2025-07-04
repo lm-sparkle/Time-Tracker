@@ -31,11 +31,11 @@ type Status =
   | "clocked_out_for_break"
   | "clocked_out";
 
-  type AttendanceSummary = {
-    fullDay: number;
-    halfDay: number;
-    absent: number;
-  };
+type AttendanceSummary = {
+  fullDay: number;
+  halfDay: number;
+  absent: number;
+};
 
 const formatTime = (seconds: number): string => {
   const h = Math.floor(seconds / 3600)
@@ -87,8 +87,8 @@ const HomePage: React.FC = () => {
 
   const [loggedTimeAnim, setLoggedTimeAnim] = useState(false);
   const [breakTimeAnim, setBreakTimeAnim] = useState(false);
-  const [trackerStatusAnim, setTrackerStatusAnim] = useState(false); 
-  
+  const [trackerStatusAnim, setTrackerStatusAnim] = useState(false);
+
   const [attendanceSummary, setAttendanceSummary] = useState<AttendanceSummary>(
     {
       fullDay: 0,
@@ -370,8 +370,8 @@ const HomePage: React.FC = () => {
       const timeToSeconds = (timeStr: {
         split: (arg0: string) => {
           (): any;
-          new (): any;
-          map: { (arg0: NumberConstructor): [any, any, any]; new (): any };
+          new(): any;
+          map: { (arg0: NumberConstructor): [any, any, any]; new(): any };
         };
       }) => {
         const [h, m, s] = timeStr.split(":").map(Number);
@@ -404,8 +404,7 @@ const HomePage: React.FC = () => {
     try {
       const today = new Date().toISOString().split("T")[0];
       const response = await api.get(
-        `${
-          import.meta.env.VITE_API_URL
+        `${import.meta.env.VITE_API_URL
         }time/user/latest/${sessionStorage.getItem("userId")}?date=${today}`,
         {
           headers: {
@@ -460,38 +459,38 @@ const HomePage: React.FC = () => {
   }, [fetchedEntriesForAttendance]);
 
   const calculateUserAttendance = useMemo(() => {
-  let fullDay = 0;
-  let halfDay = 0;
-  let absent = 0;
+    let fullDay = 0;
+    let halfDay = 0;
+    let absent = 0;
 
-  // Get today's date
-  const today = new Date();
-  const currentDate = today.getDate();
-  const currentMonth = today.getMonth();
-  const currentYear = today.getFullYear();
+    // Get today's date
+    const today = new Date();
+    const currentDate = today.getDate();
+    const currentMonth = today.getMonth();
+    const currentYear = today.getFullYear();
 
-  // Only check dates up to today in the current month
-  for (let day = 1; day <= currentDate; day++) {
-    const date = new Date(currentYear, currentMonth, day);
-    
-    // Skip Sundays
-    if (date.getDay() === 0) continue;
+    // Only check dates up to today in the current month
+    for (let day = 1; day <= currentDate; day++) {
+      const date = new Date(currentYear, currentMonth, day);
 
-    const formattedDate = `${currentYear}-${String(currentMonth + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
-    const key = `${user?.id}_${formattedDate}`;
-    const status = attendanceStatusMap[key];
+      // Skip Sundays
+      if (date.getDay() === 0) continue;
 
-    if (status === "full_day") {
-      fullDay++;
-    } else if (status === "half_day") {
-      halfDay++;
-    } else {
-      absent++;
+      const formattedDate = `${currentYear}-${String(currentMonth + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
+      const key = `${user?.id}_${formattedDate}`;
+      const status = attendanceStatusMap[key];
+
+      if (status === "full_day") {
+        fullDay++;
+      } else if (status === "half_day") {
+        halfDay++;
+      } else {
+        absent++;
+      }
     }
-  }
 
-  return { fullDay, halfDay, absent };
-}, [fetchedEntriesForAttendance, user?.id]);
+    return { fullDay, halfDay, absent };
+  }, [fetchedEntriesForAttendance, user?.id]);
 
   useEffect(() => {
     setAttendanceSummary(calculateUserAttendance);
@@ -504,8 +503,7 @@ const HomePage: React.FC = () => {
       if (!(status === "clocked_in" || status === "clocked_out_for_break"))
         return;
       const response = await api.put(
-        `${
-          import.meta.env.VITE_API_URL
+        `${import.meta.env.VITE_API_URL
         }time/final-clock-out/${sessionStorage.getItem("time_Id")}`,
         {
           userId: user?.id,
@@ -546,7 +544,7 @@ const HomePage: React.FC = () => {
       {/* Main Content */}
       <div className="py-10">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="mb-8">
+          <div className="mb-8">
             <div className="flex flex-col md:flex-row gap-4 items-start md:items-center justify-between">
               <div className="w-full md:w-auto">
                 <h1 className="text-3xl font-bold text-gray-900">
@@ -630,12 +628,12 @@ const HomePage: React.FC = () => {
                       <div className="text-2xl font-semibold text-gray-900">
                         {status === "clocked_in"
                           ? formatTime(
-                              (totalWorkingTime
-                                ? totalWorkingTime
-                                    .split(":")
-                                    .reduce((acc, time) => 60 * acc + +time, 0)
-                                : 0) + totalSecondsToday
-                            )
+                            (totalWorkingTime
+                              ? totalWorkingTime
+                                .split(":")
+                                .reduce((acc, time) => 60 * acc + +time, 0)
+                              : 0) + totalSecondsToday
+                          )
                           : totalWorkingTime || "00:00:00"}
                       </div>
                     </dd>
@@ -682,13 +680,12 @@ const HomePage: React.FC = () => {
                   status === "clocked_out_for_break"
                 )
               }
-              className={`time-card bg-white overflow-hidden shadow rounded-lg text-left ${
-                (status === "not_clocked_in" ||
+              className={`time-card bg-white overflow-hidden shadow rounded-lg text-left ${(status === "not_clocked_in" ||
                   status === "clocked_out_for_break") &&
-                !isClockInLoading
+                  !isClockInLoading
                   ? "cursor-pointer hover:shadow-lg transition-shadow"
                   : "opacity-50 cursor-not-allowed"
-              }`}
+                }`}
             >
               <div className="px-4 py-5 sm:p-6 text-center h-full">
                 {isClockInLoading ? (
@@ -713,8 +710,12 @@ const HomePage: React.FC = () => {
                     <div className="mt-4 text-2xl font-semibold text-gray-900">
                       {userLatestTime[0]?.inTime
                         ? new Date(
-                            userLatestTime[0]?.inTime
-                          ).toLocaleTimeString()
+                          userLatestTime[0]?.inTime
+                        ).toLocaleTimeString('en-US', {
+                          hour: "2-digit",
+                          minute: "2-digit",
+                          second: "2-digit",
+                        })
                         : "--:--:--"}
                     </div>
                   </>
@@ -726,11 +727,10 @@ const HomePage: React.FC = () => {
             <button
               onClick={handleClockOut}
               disabled={status !== "clocked_in" || isClockOutLoading}
-              className={`time-card bg-white overflow-hidden shadow rounded-lg text-left ${
-                status === "clocked_in" && !isClockOutLoading
+              className={`time-card bg-white overflow-hidden shadow rounded-lg text-left ${status === "clocked_in" && !isClockOutLoading
                   ? "cursor-pointer hover:shadow-lg transition-shadow"
                   : "opacity-50 cursor-not-allowed"
-              }`}
+                }`}
             >
               <div className="px-4 py-5 sm:p-6 text-center h-full">
                 {isClockOutLoading ? (
@@ -753,8 +753,12 @@ const HomePage: React.FC = () => {
                     <div className="mt-4 text-2xl font-semibold text-gray-900">
                       {userLatestTime[0]?.outTime
                         ? new Date(
-                            userLatestTime[0]?.outTime
-                          ).toLocaleTimeString()
+                          userLatestTime[0]?.outTime
+                        ).toLocaleTimeString('en-US', {
+                          hour: "2-digit",
+                          minute: "2-digit",
+                          second: "2-digit",
+                        })
                         : "--:--:--"}
                     </div>
                   </>
@@ -768,11 +772,10 @@ const HomePage: React.FC = () => {
               disabled={
                 !(status === "clocked_in" || status === "clocked_out_for_break")
               }
-              className={`time-card bg-white overflow-hidden shadow rounded-lg text-left ${
-                status === "clocked_in" || status === "clocked_out_for_break"
+              className={`time-card bg-white overflow-hidden shadow rounded-lg text-left ${status === "clocked_in" || status === "clocked_out_for_break"
                   ? "cursor-pointer hover:shadow-lg transition-shadow"
                   : "opacity-50 cursor-not-allowed"
-              }`}
+                }`}
             >
               <div className="px-4 py-5 sm:p-6 text-center">
                 <div className="mx-auto flex-shrink-0 flex items-center justify-center h-12 w-12 rounded-full bg-red-100">
@@ -787,8 +790,12 @@ const HomePage: React.FC = () => {
                     <>
                       {userLatestTime[0]?.outTime
                         ? new Date(
-                            userLatestTime[0]?.outTime
-                          ).toLocaleTimeString()
+                          userLatestTime[0]?.outTime
+                        ).toLocaleTimeString('en-US', {
+                          hour: "2-digit",
+                          minute: "2-digit",
+                          second: "2-digit",
+                        })
                         : "--:--:--"}
                     </>
                   ) : (
@@ -844,14 +851,12 @@ const HomePage: React.FC = () => {
                                 </p>
                                 <p className="font-medium">
                                   {event.inTime
-                                    ? new Date(event.inTime).toLocaleTimeString(
-                                        [],
-                                        {
-                                          hour: "2-digit",
-                                          minute: "2-digit",
-                                          second: "2-digit",
-                                        }
-                                      )
+                                    ? new Date(event.inTime).toLocaleTimeString('en-US', {
+                                      hour: "2-digit",
+                                      minute: "2-digit",
+                                      second: "2-digit",
+                                    }
+                                    )
                                     : "--:--:--"}
                                 </p>
                               </div>
@@ -865,12 +870,12 @@ const HomePage: React.FC = () => {
                                 <p className="font-medium">
                                   {event.outTime
                                     ? new Date(
-                                        event.outTime
-                                      ).toLocaleTimeString([], {
-                                        hour: "2-digit",
-                                        minute: "2-digit",
-                                        second: "2-digit",
-                                      })
+                                      event.outTime
+                                    ).toLocaleTimeString('en-US', {
+                                      hour: "2-digit",
+                                      minute: "2-digit",
+                                      second: "2-digit",
+                                    })
                                     : "--:--:--"}
                                 </p>
                               </div>
