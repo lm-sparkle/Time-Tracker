@@ -19,6 +19,7 @@ import {
   FaCalendarCheck,
   FaCheckCircle,
   FaUserSlash,
+  FaStopwatch,
 } from "react-icons/fa";
 import { useAuth } from "../../Auth/AuthContext";
 import Modal from "../../Components/Modal";
@@ -496,6 +497,18 @@ const HomePage: React.FC = () => {
     setAttendanceSummary(calculateUserAttendance);
   }, [calculateUserAttendance]);
 
+  const workedSeconds =
+  status === "clocked_in"
+    ? timeToSeconds(totalWorkingTime) + totalSecondsToday
+    : timeToSeconds(totalWorkingTime);
+
+  const dailyTargetSeconds = isSaturday ? 14400 : 28800;
+
+  const progressPercent = Math.min(
+  100,
+  Math.round((workedSeconds / dailyTargetSeconds) * 100)
+);
+
   const handleSubmit = async (e: FormEvent) => {
     e.preventDefault();
     setIsSubmitting(true);
@@ -589,7 +602,7 @@ const HomePage: React.FC = () => {
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
             {/* Current Status */}
             <div
-              className={`bg-white overflow-hidden shadow rounded-lg transition 
+              className={`pt-2 border border-indigo-200 bg-white overflow-hidden shadow rounded-lg transition 
     ${trackerStatusAnim ? " animated-ring-status" : ""}`}
             >
               <div className="px-4 py-5 sm:p-6">
@@ -608,11 +621,23 @@ const HomePage: React.FC = () => {
                     </dd>
                   </div>
                 </div>
+                <div className="mt-3 flex items-center text-sm text-gray-500 px-1">
+                            <FaClock className="mr-2" />
+                            <span>Since {userLatestTime[0]?.inTime
+                        ? new Date(
+                            userLatestTime[0]?.inTime
+                          ).toLocaleTimeString('en-US', {
+                            hour: "2-digit",
+                            minute: "2-digit",
+                            second: "2-digit",
+                          })
+                        : "--:--:--"}</span>
+                        </div>
               </div>
             </div>
             {/* Total Hours Today */}
             <div
-              className={`bg-white overflow-hidden shadow rounded-lg transition 
+              className={`border border-green-200 bg-white overflow-hidden shadow rounded-lg transition 
     ${loggedTimeAnim ? " animated-ring-in" : ""}`}
             >
               <div className="px-4 py-5 sm:p-6">
@@ -628,22 +653,32 @@ const HomePage: React.FC = () => {
                       <div className="text-2xl font-semibold text-gray-900">
                         {status === "clocked_in"
                           ? formatTime(
-                            (totalWorkingTime
-                              ? totalWorkingTime
-                                .split(":")
-                                .reduce((acc, time) => 60 * acc + +time, 0)
-                              : 0) + totalSecondsToday
-                          )
+                              (totalWorkingTime
+                                ? totalWorkingTime
+                                    .split(":")
+                                    .reduce((acc, time) => 60 * acc + +time, 0)
+                                : 0) + totalSecondsToday
+                            )
                           : totalWorkingTime || "00:00:00"}
                       </div>
                     </dd>
                   </div>
+                  
                 </div>
+              <div className="mt-3">
+                            <div className="flex items-center justify-between text-sm text-gray-500 mb-1">
+                                <span>Daily Target: 8h</span>
+                                <span>{progressPercent}%</span>
+                            </div>
+                            <div className="w-full bg-gray-200 rounded-full h-1.5">
+                                <div className="bg-gradient-to-r from-green-400 to-teal-500 h-1.5 rounded-full" style={{width: `${progressPercent}%` }}></div>
+                            </div>
+                        </div>
               </div>
             </div>
             {/* Total Break Today */}
             <div
-              className={`bg-white overflow-hidden shadow rounded-lg transition 
+              className={`pt-2 border border-amber-200 bg-white overflow-hidden shadow rounded-lg transition 
     ${breakTimeAnim ? " animated-ring-out" : ""}`}
             >
               <div className="px-4 py-5 sm:p-6">
@@ -664,6 +699,18 @@ const HomePage: React.FC = () => {
                     </dd>
                   </div>
                 </div>
+              <div className="mt-3 flex items-center text-sm text-gray-500 px-1">
+                            <FaStopwatch className="mr-2" />
+                            <span>Since {userLatestTime[0]?.outTime
+                        ? new Date(
+                            userLatestTime[0]?.outTime
+                          ).toLocaleTimeString('en-US', {
+                            hour: "2-digit",
+                            minute: "2-digit",
+                            second: "2-digit",
+                          })
+                        : "--:--:--"}</span>
+                        </div>
               </div>
             </div>
           </div>
@@ -680,7 +727,7 @@ const HomePage: React.FC = () => {
                   status === "clocked_out_for_break"
                 )
               }
-              className={`time-card bg-white overflow-hidden shadow rounded-lg text-left ${(status === "not_clocked_in" ||
+              className={`time-card bg-gradient-to-br from-green-50 to-green-100 border border-green-200 overflow-hidden shadow rounded-lg text-left ${(status === "not_clocked_in" ||
                   status === "clocked_out_for_break") &&
                   !isClockInLoading
                   ? "cursor-pointer hover:shadow-lg transition-shadow"
@@ -692,7 +739,7 @@ const HomePage: React.FC = () => {
                   <FaSpinner className="animate-spin text-2xl text-green-600 mx-auto" />
                 ) : (
                   <>
-                    <div className="mx-auto flex-shrink-0 flex items-center justify-center h-12 w-12 rounded-full bg-green-100">
+                    <div className="mx-auto flex-shrink-0 flex items-center justify-center h-12 w-12 rounded-full bg-green-200">
                       <FaSignInAlt className="text-green-600 text-xl" />
                     </div>
                     <h3 className="mt-3 text-lg font-medium text-gray-900 space-x-2 gap-2 flex items-center justify-center">
@@ -727,22 +774,22 @@ const HomePage: React.FC = () => {
             <button
               onClick={handleClockOut}
               disabled={status !== "clocked_in" || isClockOutLoading}
-              className={`time-card bg-white overflow-hidden shadow rounded-lg text-left ${status === "clocked_in" && !isClockOutLoading
+              className={`time-card bg-gradient-to-br from-amber-50 to-amber-100 border border-amber-200 overflow-hidden shadow rounded-lg text-left ${status === "clocked_in" && !isClockOutLoading
                   ? "cursor-pointer hover:shadow-lg transition-shadow"
                   : "opacity-50 cursor-not-allowed"
                 }`}
             >
               <div className="px-4 py-5 sm:p-6 text-center h-full">
                 {isClockOutLoading ? (
-                  <FaSpinner className="animate-spin text-2xl text-yellow-600 mx-auto" />
+                  <FaSpinner className="animate-spin text-2xl text-amber-600 mx-auto" />
                 ) : (
                   <>
-                    <div className="mx-auto flex-shrink-0 flex items-center justify-center h-12 w-12 rounded-full bg-yellow-100">
-                      <FaSignOutAlt className="text-yellow-600 text-xl" />
+                    <div className="mx-auto flex-shrink-0 flex items-center justify-center h-12 w-12 rounded-full bg-amber-200">
+                      <FaSignOutAlt className="text-amber-600 text-xl" />
                     </div>
                     <h3 className="mt-3 text-lg font-medium text-gray-900 space-x-2 gap-2 flex items-center justify-center">
                       Clock Out
-                      <span className="inline-flex items-center rounded-md bg-yellow-50 px-2 py-1 text-xs font-medium text-yellow-800 ring-1 ring-yellow-600/20 ring-inset">
+                      <span className="inline-flex items-center rounded-md bg-amber-50 px-2 py-1 text-xs font-medium text-amber-800 ring-1 ring-amber-600/20 ring-inset">
                         <FaTimes className="mr-1" />
                         <span className="text-base">
                           {clockOutCount > 0 ? clockOutCount : "0"}
@@ -772,13 +819,13 @@ const HomePage: React.FC = () => {
               disabled={
                 !(status === "clocked_in" || status === "clocked_out_for_break")
               }
-              className={`time-card bg-white overflow-hidden shadow rounded-lg text-left ${status === "clocked_in" || status === "clocked_out_for_break"
+              className={`time-card bg-gradient-to-br from-red-50 to-red-100 border border-red-200 overflow-hidden shadow rounded-lg text-left ${status === "clocked_in" || status === "clocked_out_for_break"
                   ? "cursor-pointer hover:shadow-lg transition-shadow"
                   : "opacity-50 cursor-not-allowed"
                 }`}
             >
               <div className="px-4 py-5 sm:p-6 text-center">
-                <div className="mx-auto flex-shrink-0 flex items-center justify-center h-12 w-12 rounded-full bg-red-100">
+                <div className="mx-auto flex-shrink-0 flex items-center justify-center h-12 w-12 rounded-full bg-red-200">
                   <FaDoorOpen className="text-red-600 text-xl" />
                 </div>
                 <h3 className="mt-3 text-lg font-medium text-gray-900">
