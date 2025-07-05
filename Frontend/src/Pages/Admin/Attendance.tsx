@@ -447,7 +447,7 @@ users.forEach((user) => {
                               onClick={() => openModal(user, iso)}
                             >
                               <FaCheckCircle
-                                className="text-green-400 text-xl inline"
+                                className="text-green-500 text-xl inline"
                                 title="Present (entry exists, status not set)"
                               />
                             </td>
