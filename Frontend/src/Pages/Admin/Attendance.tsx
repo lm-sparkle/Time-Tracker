@@ -14,6 +14,12 @@ import {
 } from "react-icons/fa";
 import Modal from "../../Components/Modal";
 
+function isTodayISO(dateISO: string) {
+  const today = new Date();
+  const isoToday = today.toISOString().slice(0, 10);
+  return dateISO === isoToday;
+}
+
 type User = {
   _id: string;
   fullName: string;
@@ -219,42 +225,68 @@ const Attendance: React.FC = () => {
   }, []);
 
   const attendanceStatusMap = useMemo(() => {
-    const map: Record<string, string> = {};
+    const map: Record<
+      string,
+      { attendanceStatus: string; workingHours: string }
+    > = {};
     fetchedEntries.forEach((entry) => {
       const key = `${entry.userId}_${entry.dateString}`;
-      map[key] = entry.attendanceStatus;
+      map[key] = {
+        attendanceStatus: entry.attendanceStatus,
+        workingHours: entry.workingHours,
+      };
     });
     return map;
   }, [fetchedEntries]);
 
   const userSummaryCounts: Record<
-    string,
-    { fullDay: number; halfDay: number; absent: number }
-  > = {};
+  string,
+  { fullDay: number; halfDay: number; absent: number }
+> = {};
 
-  users.forEach((user) => {
-    let fullDay = 0;
-    let halfDay = 0;
-    let absent = 0;
+users.forEach((user) => {
+  let fullDay = 0;
+  let halfDay = 0;
+  let absent = 0;
 
-    datesISO.forEach((dateISO) => {
-      const date = new Date(dateISO);
-      if (date.getDay() === 0) return; // skip Sundays
+  datesISO.forEach((dateISO) => {
+    const date = new Date(dateISO);
+    if (date.getDay() === 0) return; // skip Sundays
 
-      const key = `${user._id}_${dateISO}`;
-      const status = attendanceStatusMap[key];
+    const key = `${user._id}_${dateISO}`;
+    const attendanceData = attendanceStatusMap[key];
+    const attendanceStatus = attendanceData?.attendanceStatus;
 
-      if (status === "full_day") {
+    const isToday = isTodayISO(dateISO);
+    const hasEntryToday = fetchedEntries.some(
+      (entry) => entry.userId === user._id && entry.dateString === dateISO
+    );
+
+    if (isToday) {
+      if (attendanceStatus === "full_day") {
         fullDay++;
-      } else if (status === "half_day") {
+      } else if (attendanceStatus === "half_day") {
+        halfDay++;
+      } else if (attendanceStatus === "absent") {
+        absent++;
+      } else if (hasEntryToday) {
+        fullDay++; // or count as present, up to you
+      } else {
+        absent++;
+      }
+    } else {
+      if (attendanceStatus === "full_day") {
+        fullDay++;
+      } else if (attendanceStatus === "half_day") {
         halfDay++;
       } else {
         absent++;
       }
-    });
-
-    userSummaryCounts[user._id] = { fullDay, halfDay, absent };
+    }
   });
+
+  userSummaryCounts[user._id] = { fullDay, halfDay, absent };
+});
 
   return (
     <div className="container mx-auto px-4 py-8">
@@ -344,10 +376,17 @@ const Attendance: React.FC = () => {
                     </td>
                     {users.map((user) => {
                       const key = `${user._id}_${iso}`;
-                      const attendanceStatus = attendanceStatusMap[key];
+                      const attendanceData = attendanceStatusMap[key];
+                      const attendanceStatus = attendanceData?.attendanceStatus;
 
                       const date = new Date(iso);
                       const isSunday = date.getDay() === 0;
+
+                      const isToday = isTodayISO(iso);
+                      const hasEntryToday = fetchedEntries.some(
+                        (entry) =>
+                          entry.userId === user._id && entry.dateString === iso
+                      );
 
                       if (isSunday) {
                         return (
@@ -360,35 +399,128 @@ const Attendance: React.FC = () => {
                         );
                       }
 
-                      return (
-                        <td
-                          key={user._id + iso}
-                          className="text-center"
-                          onClick={() => openModal(user, iso)}
-                        >
-                          {!attendanceStatus ? (
+                      if (isToday) {
+                        if (attendanceStatus === "full_day") {
+                          return (
+                            <td
+                              key={user._id + iso}
+                              className="text-center"
+                              onClick={() => openModal(user, iso)}
+                            >
+                              <FaCheckCircle
+                                className="text-green-500 text-xl inline"
+                                title="full day"
+                              />
+                            </td>
+                          );
+                        } else if (attendanceStatus === "half_day") {
+                          return (
+                            <td
+                              key={user._id + iso}
+                              className="text-center"
+                              onClick={() => openModal(user, iso)}
+                            >
+                              <FaCheckCircle
+                                className="text-amber-500 text-xl inline"
+                                title="half day"
+                              />
+                            </td>
+                          );
+                        } else if (attendanceStatus === "absent") {
+                          return (
+                            <td
+                              key={user._id + iso}
+                              className="text-center"
+                              onClick={() => openModal(user, iso)}
+                            >
+                              <FaTimesCircle
+                                className="text-red-500 text-xl inline"
+                                title="absent"
+                              />
+                            </td>
+                          );
+                        } else if (hasEntryToday) {
+                          return (
+                            <td
+                              key={user._id + iso}
+                              className="text-center"
+                              onClick={() => openModal(user, iso)}
+                            >
+                              <FaCheckCircle
+                                className="text-green-400 text-xl inline"
+                                title="Present (entry exists, status not set)"
+                              />
+                            </td>
+                          );
+                        } else {
+                          return (
+                            <td
+                              key={user._id + iso}
+                              className="text-center"
+                              onClick={() => openModal(user, iso)}
+                            >
+                              <FaTimesCircle
+                                className="text-red-500 text-xl inline"
+                                title="absent (no entry)"
+                              />
+                            </td>
+                          );
+                        }
+                      }
+
+                      if (!attendanceStatus) {
+                        return (
+                          <td
+                            key={user._id + iso}
+                            className="text-center"
+                            onClick={() => openModal(user, iso)}
+                          >
                             <FaTimesCircle
                               className="text-red-500 text-xl inline"
-                              title="Absent"
+                              title="absent (no status)"
                             />
-                          ) : attendanceStatus === "full_day" ? (
+                          </td>
+                        );
+                      } else if (attendanceStatus === "full_day") {
+                        return (
+                          <td
+                            key={user._id + iso}
+                            className="text-center"
+                            onClick={() => openModal(user, iso)}
+                          >
                             <FaCheckCircle
                               className="text-green-500 text-xl inline"
-                              title="Full Day"
+                              title="full day"
                             />
-                          ) : attendanceStatus === "half_day" ? (
+                          </td>
+                        );
+                      } else if (attendanceStatus === "half_day") {
+                        return (
+                          <td
+                            key={user._id + iso}
+                            className="text-center"
+                            onClick={() => openModal(user, iso)}
+                          >
                             <FaCheckCircle
                               className="text-amber-500 text-xl inline"
-                              title="Half Day"
+                              title="half day"
                             />
-                          ) : (
+                          </td>
+                        );
+                      } else {
+                        return (
+                          <td
+                            key={user._id + iso}
+                            className="text-center"
+                            onClick={() => openModal(user, iso)}
+                          >
                             <FaTimesCircle
                               className="text-red-500 text-xl inline"
-                              title="Absent"
+                              title="absent"
                             />
-                          )}
-                        </td>
-                      );
+                          </td>
+                        );
+                      }
                     })}
                   </tr>
                 ))}

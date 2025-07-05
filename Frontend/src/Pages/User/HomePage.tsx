@@ -238,6 +238,7 @@ const HomePage: React.FC = () => {
         sessionStorage.setItem("time_Id", res.data._id);
         setInTime(new Date(res.data.inTime));
         setStatus(res?.data?.status);
+        fetchEntriesForMonth();
         fetchUserLatestTime();
         fetchUserTimes();
       }
@@ -269,6 +270,7 @@ const HomePage: React.FC = () => {
       setTimeout(() => setTrackerStatusAnim(false), 1000);
       setOutTime(new Date(response?.data?.outTime));
       setStatus(response?.data?.status);
+      fetchEntriesForMonth();
       fetchUserLatestTime();
       fetchUserTimes();
     } catch (err) {
@@ -463,35 +465,53 @@ const HomePage: React.FC = () => {
     let fullDay = 0;
     let halfDay = 0;
     let absent = 0;
-
-    // Get today's date
+  
     const today = new Date();
     const currentDate = today.getDate();
     const currentMonth = today.getMonth();
     const currentYear = today.getFullYear();
-
-    // Only check dates up to today in the current month
+  
+    const pad = (num: number) => String(num).padStart(2, '0');
+  
+    const todayISO = `${currentYear}-${pad(currentMonth + 1)}-${pad(currentDate)}`;
+  
     for (let day = 1; day <= currentDate; day++) {
       const date = new Date(currentYear, currentMonth, day);
-
-      // Skip Sundays
-      if (date.getDay() === 0) continue;
-
-      const formattedDate = `${currentYear}-${String(currentMonth + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
+      if (date.getDay() === 0) continue; 
+  
+      const formattedDate = `${currentYear}-${pad(currentMonth + 1)}-${pad(day)}`;
       const key = `${user?.id}_${formattedDate}`;
       const status = attendanceStatusMap[key];
-
-      if (status === "full_day") {
-        fullDay++;
-      } else if (status === "half_day") {
-        halfDay++;
+      const isToday = formattedDate === todayISO;
+      const hasEntryToday = fetchedEntriesForAttendance.some(
+          (entry) => entry.userId === user?.id && entry.dateString === todayISO
+        );
+  
+      if (isToday) {
+        if (status === "full_day") {
+          fullDay++;
+        } else if (status === "half_day") {
+          halfDay++;
+        } else if (status === "absent") {
+          absent++;
+        } else if (hasEntryToday) {
+          fullDay++;
+        } else {
+          absent++;
+        }
       } else {
-        absent++;
+        if (status === "full_day") {
+          fullDay++;
+        } else if (status === "half_day") {
+          halfDay++;
+        } else {
+          absent++;
+        }
       }
     }
-
+  
     return { fullDay, halfDay, absent };
-  }, [fetchedEntriesForAttendance, user?.id]);
+  }, [attendanceStatusMap, user?.id, userTimes]);
 
   useEffect(() => {
     setAttendanceSummary(calculateUserAttendance);
@@ -543,6 +563,7 @@ const HomePage: React.FC = () => {
       setOutTime(null);
       if (timerRef.current) clearInterval(timerRef.current);
       closeModals();
+      fetchEntriesForMonth();
       fetchUserLatestTime();
       fetchUserTimes();
     } catch (err) {
