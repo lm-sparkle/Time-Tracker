@@ -574,7 +574,7 @@ const HomePage: React.FC = () => {
                     <div className="flex items-center gap-2">
                       <div className="w-full">
                         <dt className="text-sm font-medium text-gray-500 truncate text-center md:text-left flex items-center justify-center md:justify-start">
-                          <FaCalendarCheck className="mr-2 text-blue-600 text-lg" />Monthly Attendance
+                          <FaCalendarCheck className="mr-2 text-blue-600 text-lg" />My Monthly Attendance
                         </dt>
                         <dd className="mt-2 flex flex-col md:flex-row gap-2 md:gap-4 items-center justify-center md:justify-start">
                           <div className="flex items-center text-green-600">
@@ -667,7 +667,7 @@ const HomePage: React.FC = () => {
                 </div>
               <div className="mt-3">
                             <div className="flex items-center justify-between text-sm text-gray-500 mb-1">
-                                <span>Daily Target: 8h</span>
+                                <span>Daily Target: {isSaturday ? "4" : "8"}h</span>
                                 <span>{progressPercent}%</span>
                             </div>
                             <div className="w-full bg-gray-200 rounded-full h-1.5">
