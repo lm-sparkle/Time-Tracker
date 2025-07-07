@@ -51,6 +51,12 @@ const formatTime = (seconds: number): string => {
   return `${h}:${m}:${s}`;
 };
 
+function timeStrToSeconds(timeStr: string) {
+  if (!timeStr) return 0;
+  const [h = "0", m = "0", s = "0"] = timeStr.split(":");
+  return Number(h) * 3600 + Number(m) * 60 + Number(s);
+}
+
 const HomePage: React.FC = () => {
   const { user } = useAuth();
   // State
@@ -453,15 +459,32 @@ const HomePage: React.FC = () => {
   }, []);
 
   const attendanceStatusMap = useMemo(() => {
-    const map: Record<string, string> = {};
-    fetchedEntriesForAttendance.forEach((entry) => {
-      const key = `${entry.userId}_${entry.dateString}`;
-      map[key] = entry.attendanceStatus;
-    });
-    return map;
-  }, [fetchedEntriesForAttendance]);
+      const map: Record<
+        string,
+        { attendanceStatus: string; workingHours: string; totalSeconds: number }
+      > = {};
+    
+      fetchedEntriesForAttendance.forEach((entry) => {
+        const key = `${entry.userId}_${entry.dateString}`;
+        const seconds = timeStrToSeconds(entry.workingHours);
+    
+        if (!map[key]) {
+          map[key] = {
+            attendanceStatus: entry.attendanceStatus,
+            workingHours: entry.workingHours,
+            totalSeconds: seconds,
+          };
+        } else {
+          map[key].totalSeconds += seconds;
+    
+          map[key].attendanceStatus = entry.attendanceStatus;
+        }
+      });
+   
+      return map;
+    }, [fetchedEntriesForAttendance]);
 
-  const calculateUserAttendance = useMemo(() => {
+  const calculateUserAttendance = useMemo<AttendanceSummary>(() => {
     let fullDay = 0;
     let halfDay = 0;
     let absent = 0;
@@ -481,11 +504,21 @@ const HomePage: React.FC = () => {
   
       const formattedDate = `${currentYear}-${pad(currentMonth + 1)}-${pad(day)}`;
       const key = `${user?.id}_${formattedDate}`;
-      const status = attendanceStatusMap[key];
+      const attendanceData = attendanceStatusMap[key];
+      const status = attendanceData?.attendanceStatus;
+      const totalSeconds = attendanceData?.totalSeconds;
       const isToday = formattedDate === todayISO;
       const hasEntryToday = fetchedEntriesForAttendance.some(
           (entry) => entry.userId === user?.id && entry.dateString === todayISO
         );
+
+        if (
+          date.getDay() === 6 &&
+          totalSeconds >= 14400
+        ) {
+          fullDay++;
+          continue;
+        }
   
       if (isToday) {
         if (status === "full_day") {
@@ -526,7 +559,8 @@ const HomePage: React.FC = () => {
 
   const progressPercent = Math.min(
   100,
-  Math.round((workedSeconds / dailyTargetSeconds) * 100)
+  // Math.round((workedSeconds / dailyTargetSeconds) * 100)
+  parseFloat(((workedSeconds / dailyTargetSeconds) * 100).toFixed(2))
 );
 
   const handleSubmit = async (e: FormEvent) => {

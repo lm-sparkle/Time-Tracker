@@ -20,6 +20,12 @@ function isTodayISO(dateISO: string) {
   return dateISO === isoToday;
 }
 
+function timeStrToSeconds(timeStr: string) {
+  if (!timeStr) return 0;
+  const [h = "0", m = "0", s = "0"] = timeStr.split(":");
+  return Number(h) * 3600 + Number(m) * 60 + Number(s);
+}
+
 type User = {
   _id: string;
   fullName: string;
@@ -227,18 +233,29 @@ const Attendance: React.FC = () => {
   const attendanceStatusMap = useMemo(() => {
     const map: Record<
       string,
-      { attendanceStatus: string; workingHours: string }
+      { attendanceStatus: string; workingHours: string; totalSeconds: number }
     > = {};
+  
     fetchedEntries.forEach((entry) => {
       const key = `${entry.userId}_${entry.dateString}`;
-      map[key] = {
-        attendanceStatus: entry.attendanceStatus,
-        workingHours: entry.workingHours,
-      };
+      const seconds = timeStrToSeconds(entry.workingHours);
+  
+      if (!map[key]) {
+        map[key] = {
+          attendanceStatus: entry.attendanceStatus,
+          workingHours: entry.workingHours,
+          totalSeconds: seconds,
+        };
+      } else {
+        map[key].totalSeconds += seconds;
+  
+        map[key].attendanceStatus = entry.attendanceStatus;
+      }
     });
+ 
     return map;
   }, [fetchedEntries]);
-
+  
   const userSummaryCounts: Record<
   string,
   { fullDay: number; halfDay: number; absent: number }
@@ -256,11 +273,20 @@ users.forEach((user) => {
     const key = `${user._id}_${dateISO}`;
     const attendanceData = attendanceStatusMap[key];
     const attendanceStatus = attendanceData?.attendanceStatus;
+    const totalSeconds = attendanceData?.totalSeconds;
 
     const isToday = isTodayISO(dateISO);
     const hasEntryToday = fetchedEntries.some(
       (entry) => entry.userId === user._id && entry.dateString === dateISO
     );
+
+    if (
+      date.getDay() === 6 &&
+      totalSeconds >= 14400
+    ) {
+      fullDay++;
+      return;
+    }
 
     if (isToday) {
       if (attendanceStatus === "full_day") {
@@ -270,7 +296,7 @@ users.forEach((user) => {
       } else if (attendanceStatus === "absent") {
         absent++;
       } else if (hasEntryToday) {
-        fullDay++; // or count as present, up to you
+        fullDay++; 
       } else {
         absent++;
       }
@@ -378,11 +404,14 @@ users.forEach((user) => {
                       const key = `${user._id}_${iso}`;
                       const attendanceData = attendanceStatusMap[key];
                       const attendanceStatus = attendanceData?.attendanceStatus;
+                      const workingHours = attendanceData?.totalSeconds;
 
                       const date = new Date(iso);
+                      const isSaturday = date.getDay() === 6;
                       const isSunday = date.getDay() === 0;
 
                       const isToday = isTodayISO(iso);
+                      
                       const hasEntryToday = fetchedEntries.some(
                         (entry) =>
                           entry.userId === user._id && entry.dateString === iso
@@ -395,6 +424,21 @@ users.forEach((user) => {
                             className="text-center text-gray-400"
                           >
                             -
+                          </td>
+                        );
+                      }
+                                          
+                      if (isSaturday && workingHours >= 14400 ) {
+                        return (
+                          <td
+                            key={user._id + iso}
+                            className="text-center"
+                            onClick={() => openModal(user, iso)}
+                          >
+                            <FaCheckCircle
+                              className="text-green-500 text-xl inline"
+                              title="Saturday half day, counted as Full Day"
+                            />
                           </td>
                         );
                       }
