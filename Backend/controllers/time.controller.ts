@@ -187,7 +187,7 @@ export const finalClockOut = async (
     await entry.save();
 
     // Send status update email
-    sendStatusUpdate(req, res, next);
+    await sendStatusUpdate(req, res, next);
     res.status(200).json(entry);
   } catch (error) {
     next(error);

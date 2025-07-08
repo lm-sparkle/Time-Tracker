@@ -113,23 +113,28 @@ Sparkle Time Tracker
     });
 
     const mailOptions = {
-      from: `"Time Tracker" <hg.sparkle015@gmail.com>`,
+      from: `"Time Tracker" <gopiitaliya1001@gmail.com>`,
       to: ADMIN_EMAIL,
       cc: userMail,
       subject: subject,
       text: template,
     };
 
-    await transporter.sendMail(mailOptions);
+    try {
+      await transporter.sendMail(mailOptions);
+    } catch (err) {
+      console.error(`❌ Mail failed for ${userName}:`, err);
+    }
+    ;
 
     // res
     //   .status(200)
     //   .json({ success: true, message: "Status email sent and status stored" });
   } catch (error) {
-    console.error(error);
-    res
-      .status(500)
-      .json({ success: false, message: "Error sending status update" });
+    console.error("Error sending status update:", error);
+    // res
+    //   .status(500)
+    //   .json({ success: false, message: "Error sending status update" });
   }
 };
 
