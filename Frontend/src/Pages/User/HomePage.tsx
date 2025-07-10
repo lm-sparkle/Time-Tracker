@@ -654,18 +654,18 @@ const HomePage: React.FC = () => {
           <div className="mb-8">
             <div className="flex flex-col md:flex-row gap-4 items-start md:items-center justify-between">
               <div className="w-full md:w-auto flex items-center gap-4">
-                <div className="relative">
+              <div className="relative flex-shrink-0">
                   <img
-                    className="h-16 w-16 rounded-full object-cover border-4 border-white shadow-lg"
+                    className="h-16 w-16 md:h-16 md:w-16 h-12 w-12 sm:h-14 sm:w-14 rounded-full object-cover border-4 border-white shadow-lg transition-all duration-200 md:h-16 md:w-16"
                     src={`https://ui-avatars.com/api/?name=${user?.fullName}`}
                     alt="User profile"
                   />
                   {status === "clocked_in" ? (
-                    <span className="absolute bottom-0 right-0 h-5 w-5 bg-green-500 rounded-full border-2 border-white shadow"></span>
+                    <span className="absolute bottom-0 right-0 h-4 w-4 md:h-5 md:w-5 bg-green-500 rounded-full border-2 border-white shadow"></span>
                   ) : status === "clocked_out_for_break" ? (
-                    <span className="absolute bottom-0 right-0 h-5 w-5 bg-amber-500 rounded-full border-2 border-white shadow"></span>
+                    <span className="absolute bottom-0 right-0 h-4 w-4 md:h-5 md:w-5 bg-amber-500 rounded-full border-2 border-white shadow"></span>
                   ) : status === "clocked_out" ? (
-                    <span className="absolute bottom-0 right-0 h-5 w-5 bg-red-500 rounded-full border-2 border-white shadow"></span>
+                    <span className="absolute bottom-0 right-0 h-4 w-4 md:h-5 md:w-5 bg-red-500 rounded-full border-2 border-white shadow"></span>
                   ) : null}
                 </div>
                 <div className="ml-2">

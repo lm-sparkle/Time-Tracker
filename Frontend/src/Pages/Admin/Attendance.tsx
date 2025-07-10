@@ -11,6 +11,12 @@ import {
   FaSave,
   FaTimesCircle,
   FaUserSlash,
+  FaCalendarAlt,
+  FaSearch,
+  FaRedo,
+  FaUsers,
+  FaChartBar,
+  FaFilter,
 } from "react-icons/fa";
 import Modal from "../../Components/Modal";
 
@@ -18,12 +24,6 @@ function isTodayISO(dateISO: string) {
   const today = new Date();
   const isoToday = today.toISOString().slice(0, 10);
   return dateISO === isoToday;
-}
-
-function timeStrToSeconds(timeStr: string) {
-  if (!timeStr) return 0;
-  const [h = "0", m = "0", s = "0"] = timeStr.split(":");
-  return Number(h) * 3600 + Number(m) * 60 + Number(s);
 }
 
 type User = {
@@ -38,15 +38,23 @@ type User = {
 type TimeEntry = {
   attendanceStatus: string;
   status: string;
-  totalSeconds: number;
+  totalSeconds: any;
   inTime: string | number | Date;
-  workingHours: string;
+  workingHours: any;
   _id: string;
   user: any;
   dateISO: string;
+  present: any;
   userId: string;
   dateString: string;
 };
+
+// Add timeStrToSeconds helper
+function timeStrToSeconds(timeStr: string) {
+  if (!timeStr) return 0;
+  const [h = "0", m = "0", s = "0"] = timeStr.split(":");
+  return Number(h) * 3600 + Number(m) * 60 + Number(s);
+}
 
 const Attendance: React.FC = () => {
   const [users, setUsers] = useState<User[]>([]);
@@ -71,7 +79,7 @@ const Attendance: React.FC = () => {
     if (!startDate && !endDate) {
       fetchEntriesForDateRange();
     }
-  }, [startDate, endDate]);
+  }, [startDate]);
 
   const openModal = (user: User, date: string) => {
     setModalData({ user, date, status: "" });
@@ -233,366 +241,390 @@ const Attendance: React.FC = () => {
   const attendanceStatusMap = useMemo(() => {
     const map: Record<
       string,
-      { attendanceStatus: string; workingHours: string; totalSeconds: number }
+      { attendanceStatus: string; workingHours: string }
     > = {};
-  
     fetchedEntries.forEach((entry) => {
       const key = `${entry.userId}_${entry.dateString}`;
-      const seconds = timeStrToSeconds(entry.workingHours);
-  
-      if (!map[key]) {
-        map[key] = {
-          attendanceStatus: entry.attendanceStatus,
-          workingHours: entry.workingHours,
-          totalSeconds: seconds,
-        };
-      } else {
-        map[key].totalSeconds += seconds;
-  
-        map[key].attendanceStatus = entry.attendanceStatus;
-      }
+      map[key] = {
+        attendanceStatus: entry.attendanceStatus,
+        workingHours: entry.workingHours,
+      };
     });
- 
     return map;
   }, [fetchedEntries]);
-  
-  const userSummaryCounts: Record<
-  string,
-  { fullDay: number; halfDay: number; absent: number }
-> = {};
 
-users.forEach((user) => {
-  let fullDay = 0;
-  let halfDay = 0;
-  let absent = 0;
-
-  datesISO.forEach((dateISO) => {
-    const date = new Date(dateISO);
-    if (date.getDay() === 0) return; // skip Sundays
-
-    const key = `${user._id}_${dateISO}`;
-    const attendanceData = attendanceStatusMap[key];
-    const attendanceStatus = attendanceData?.attendanceStatus;
-    const totalSeconds = attendanceData?.totalSeconds;
-
-    const isToday = isTodayISO(dateISO);
-    const hasEntryToday = fetchedEntries.some(
-      (entry) => entry.userId === user._id && entry.dateString === dateISO
-    );
-
-    if (
-      date.getDay() === 6 &&
-      totalSeconds >= 14400
-    ) {
-      fullDay++;
-      return;
-    }
-
-    if (isToday) {
-      if (attendanceStatus === "full_day") {
-        fullDay++;
-      } else if (attendanceStatus === "half_day") {
-        halfDay++;
-      } else if (attendanceStatus === "absent") {
-        absent++;
-      } else if (hasEntryToday) {
-        fullDay++; 
+  const userSummaryCounts: Record<string, { fullDay: number; halfDay: number; absent: number }> = {};
+  users.forEach((user) => {
+    let fullDay = 0;
+    let halfDay = 0;
+    let absent = 0;
+    datesISO.forEach((dateISO) => {
+      const date = new Date(dateISO);
+      if (date.getDay() === 0) return; // skip Sundays
+      const key = `${user._id}_${dateISO}`;
+      const attendanceData = attendanceStatusMap[key];
+      const attendanceStatus = attendanceData?.attendanceStatus;
+      // Sum all workingHours for this user on this date (for Saturday logic)
+      let totalSeconds = 0;
+      if (date.getDay() === 6) {
+        totalSeconds = fetchedEntries
+          .filter((entry) => entry.userId === user._id && entry.dateString === dateISO)
+          .reduce((sum, entry) => sum + timeStrToSeconds(entry.workingHours), 0);
       } else {
-        absent++;
+        totalSeconds = timeStrToSeconds(attendanceData?.workingHours);
       }
-    } else {
-      if (attendanceStatus === "full_day") {
+      const isToday = isTodayISO(dateISO);
+      const hasEntryToday = fetchedEntries.some(
+        (entry) => entry.userId === user._id && entry.dateString === dateISO
+      );
+      // Saturday logic: if Saturday and totalSeconds >= 14400, count as full day
+      if (date.getDay() === 6 && totalSeconds >= 14400) {
         fullDay++;
-      } else if (attendanceStatus === "half_day") {
-        halfDay++;
-      } else {
-        absent++;
+        return;
       }
-    }
+      if (isToday) {
+        if (attendanceStatus === "full_day") {
+          fullDay++;
+        } else if (attendanceStatus === "half_day") {
+          halfDay++;
+        } else if (attendanceStatus === "absent") {
+          absent++;
+        } else if (hasEntryToday) {
+          fullDay++;
+        } else {
+          absent++;
+        }
+      } else {
+        if (attendanceStatus === "full_day") {
+          fullDay++;
+        } else if (attendanceStatus === "half_day") {
+          halfDay++;
+        } else {
+          absent++;
+        }
+      }
+    });
+    userSummaryCounts[user._id] = { fullDay, halfDay, absent };
   });
 
-  userSummaryCounts[user._id] = { fullDay, halfDay, absent };
-});
-
   return (
-    <div className="container mx-auto px-4 py-8">
-      <div className="bg-white rounded-xl shadow-md overflow-hidden p-6 mb-8">
-        <h1 className="text-3xl font-bold text-gray-800 mb-6">
-          Attendance Tracker
-        </h1>
+    <div className="min-h-screen">
+      <div className="max-w-7xl mx-auto px-4 sm:px-8 lg:px-12 py-10">
+        {/* Header Section */}
+        <div className="mb-10">
+          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-6">
+            <div className="space-y-3">
+              <div className="flex items-center space-x-4">
+                <div className="p-3 bg-gradient-to-br from-green-500 to-emerald-600 rounded-xl shadow">
+                  <FaCalendarAlt className="w-7 h-7 text-white" />
+                </div>
+                <div>
+                  <h1 className="text-4xl font-extrabold text-gray-900 tracking-tight">
+                    Attendance Tracker
+                  </h1>
+                  <p className="text-gray-500 text-base mt-1">
+                    Monitor and manage employee attendance records
+                  </p>
+                </div>
+              </div>
+              <div className="flex items-center space-x-6 text-sm text-gray-500 mt-2 px-2">
+                <div className="flex items-center space-x-2">
+                  <FaUsers className="w-4 h-4" />
+                  <span>{users.length} Team Members</span>
+                </div>
+                <div className="flex items-center space-x-2">
+                  <FaChartBar className="w-4 h-4" />
+                  <span>{datesISO.length} Days Tracked</span>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
 
         {/* Filter Section */}
-        <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-8 gap-4">
-          <div className="flex flex-wrap gap-4">
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                Start Date
-              </label>
-              <input
-                type="date"
-                value={startDate}
-                onChange={(e) => setStartDate(e.target.value)}
-                className="block w-full rounded-md border-gray-300 shadow-sm p-2"
-              />
+        <div className="bg-white rounded-2xl shadow border border-gray-100 overflow-hidden mb-10">
+          <div className="px-8 py-5 border-b border-gray-100 bg-gradient-to-r from-gray-50 to-gray-100">
+            <div className="flex items-center space-x-3">
+              <FaFilter className="w-5 h-5 text-green-600" />
+              <h2 className="text-xl font-bold text-gray-900">Date Range Filter</h2>
             </div>
-
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                End Date
-              </label>
-              <input
-                type="date"
-                value={endDate}
-                onChange={(e) => setEndDate(e.target.value)}
-                className="block w-full rounded-md border-gray-300 shadow-sm p-2"
-              />
-            </div>
-
-            <div className="flex items-end gap-2">
-              <button
-                onClick={fetchEntriesForDateRange}
-                disabled={!startDate || !endDate}
-                className={`px-4 py-2 rounded-md text-white ${
-                  !startDate || !endDate
-                    ? "bg-indigo-300 cursor-not-allowed"
-                    : "bg-indigo-600 hover:bg-indigo-700"
-                }`}
-              >
-                Search
-              </button>
-              <button
-                className="bg-gray-200 hover:bg-gray-300 text-gray-800 px-4 py-2 rounded-md transition-colors flex items-center"
-                onClick={handleResetFilters}
-              >
-                <i className="fas fa-redo mr-2"></i> Reset
-              </button>
+            <p className="text-sm text-gray-500 mt-1">Select date range to view attendance data</p>
+          </div>
+          <div className="p-8">
+            <div className="flex flex-col lg:flex-row justify-between items-start lg:items-end gap-8">
+              <div className="flex flex-col sm:flex-row gap-6 flex-1">
+                <div className="flex-1">
+                  <label className="block text-sm font-semibold text-gray-700 mb-2">
+                    Start Date
+                  </label>
+                  <input
+                    type="date"
+                    value={startDate}
+                    onChange={(e) => setStartDate(e.target.value)}
+                    className="w-full px-4 py-3 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent transition-all bg-gray-50 shadow-sm"
+                  />
+                </div>
+                <div className="flex-1">
+                  <label className="block text-sm font-semibold text-gray-700 mb-2">
+                    End Date
+                  </label>
+                  <input
+                    type="date"
+                    value={endDate}
+                    onChange={(e) => setEndDate(e.target.value)}
+                    className="w-full px-4 py-3 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent transition-all bg-gray-50 shadow-sm"
+                  />
+                </div>
+              </div>
+              {/* Responsive filter button group */}
+              <div className="flex flex-col sm:flex-row gap-3 mt-4 lg:mt-0 w-full sm:w-auto">
+                <button
+                  onClick={fetchEntriesForDateRange}
+                  disabled={!startDate || !endDate}
+                  className={`w-full sm:w-auto inline-flex items-center justify-center px-7 py-3 rounded-xl font-semibold transition-all text-base shadow border border-green-600
+                    ${!startDate || !endDate
+                      ? "bg-gray-200 text-gray-400 cursor-not-allowed border-gray-200"
+                      : "bg-gradient-to-r from-green-600 to-emerald-600 text-white hover:from-green-700 hover:to-emerald-700 hover:shadow-md transform hover:scale-105"
+                    }`}
+                >
+                  <FaSearch className="mr-2 w-5 h-5" />
+                  Search
+                </button>
+                <button
+                  className="w-full sm:w-auto inline-flex items-center px-7 py-3 bg-gray-100 hover:bg-gray-200 text-gray-700 font-semibold rounded-xl border border-gray-200 shadow-sm transition-colors"
+                  onClick={handleResetFilters}
+                >
+                  <FaRedo className="mr-2 w-5 h-5" />
+                  Reset
+                </button>
+              </div>
             </div>
           </div>
         </div>
 
         {/* Attendance Table */}
-        <div className="border rounded-lg">
+        <div className="bg-white rounded-2xl shadow border border-gray-100 overflow-hidden">
           <div className="overflow-x-auto">
-            <table className="min-w-full divide-y divide-gray-200">
-              <thead className="sticky top-0 bg-white z-10">
-                <tr className="text-center">
-                  <th className="sticky left-0 z-20 px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider bg-white">
+            <table className="min-w-full text-center border-separate border-spacing-0">
+              <thead>
+                <tr className="border-b border-gray-200 bg-white">
+                  {/* Responsive table: adjust min-width, padding, font size, and sticky for date column */}
+                  <th className="sticky md:left-0 z-20 px-4 md:px-8 py-3 md:py-5 text-xs md:text-sm font-bold text-gray-700 uppercase tracking-wider bg-white border-r border-gray-200 shadow-sm min-w-[120px] md:min-w-[200px] whitespace-nowrap">
                     Date
                   </th>
-                  {users.map((user) => (
+                  {users.map((user, idx) => (
                     <th
                       key={user._id}
-                      className="px-6 py-3 text-xs font-medium text-gray-500 uppercase tracking-wider bg-white whitespace-nowrap"
+                      className={`px-8 py-5 text-sm font-bold text-gray-700 uppercase tracking-wider bg-white border-b border-gray-200 align-middle min-w-[120px] ${idx === users.length - 1 ? 'rounded-tr-xl' : ''}`}
                     >
-                      {user.fullName}
+                      <div className="flex flex-col items-center justify-center">
+                        <div className="w-10 h-10 rounded-full bg-gradient-to-r from-blue-500 to-purple-600 flex items-center justify-center text-white text-lg font-bold mb-1 shadow-sm">
+                          {user.fullName.charAt(0).toUpperCase()}
+                        </div>
+                        <span className="text-xs font-medium text-gray-700">{user.fullName}</span>
+                      </div>
                     </th>
                   ))}
                 </tr>
               </thead>
-              <tbody className="bg-white divide-y divide-gray-200">
-                {datesISO.map((iso, _index) => (
-                  <tr key={iso} className="hover:bg-gray-50">
-                    <td className="sticky left-0 z-10 px-6 py-4 text-sm font-medium text-gray-900 bg-white whitespace-nowrap">
-                      {new Date(iso).toLocaleDateString("en-US", {
-                        weekday: "short",
-                        day: "numeric",
-                        month: "short",
-                        year: "numeric",
-                      })}
+              <tbody>
+                {datesISO.map((iso) => (
+                  <tr key={iso} className="bg-white">
+                    {/* Responsive table: adjust min-width, padding, font size, and sticky for date column */}
+                    <td className="sticky md:left-0 z-10 px-4 md:px-8 py-2 md:py-4 text-xs md:text-sm font-semibold text-gray-900 bg-white border-r border-gray-200 shadow-sm align-middle min-w-[120px] md:min-w-[200px] whitespace-nowrap">
+                      <span className="font-medium">
+                        {new Date(iso).toLocaleDateString("en-US", {
+                          weekday: "short",
+                          month: "short",
+                          day: "2-digit",
+                          year: "numeric"
+                        })}
+                      </span>
                     </td>
-                    {users.map((user) => {
+                    {users.map((user, idx) => {
                       const key = `${user._id}_${iso}`;
                       const attendanceData = attendanceStatusMap[key];
                       const attendanceStatus = attendanceData?.attendanceStatus;
-                      const workingHours = attendanceData?.totalSeconds;
-
                       const date = new Date(iso);
                       const isSaturday = date.getDay() === 6;
                       const isSunday = date.getDay() === 0;
-
                       const isToday = isTodayISO(iso);
-                      
                       const hasEntryToday = fetchedEntries.some(
-                        (entry) =>
-                          entry.userId === user._id && entry.dateString === iso
+                        (entry) => entry.userId === user._id && entry.dateString === iso
                       );
-
+                      // Sum all workingHours for this user on this date (for Saturday logic)
+                      let totalSeconds = 0;
+                      if (isSaturday) {
+                        totalSeconds = fetchedEntries
+                          .filter((entry) => entry.userId === user._id && entry.dateString === iso)
+                          .reduce((sum, entry) => sum + timeStrToSeconds(entry.workingHours), 0);
+                      } else {
+                        totalSeconds = timeStrToSeconds(attendanceData?.workingHours);
+                      }
+                      let cellClass = `px-8 py-4 transition-colors duration-200 cursor-pointer border-b border-gray-100 bg-white align-middle min-w-[120px]`;
+                      if (idx === users.length - 1) cellClass += ' rounded-r-xl';
+                      if (isSunday) cellClass = 'text-center text-gray-300 bg-white px-8 py-4 align-middle min-w-[120px]';
+                      // For Saturday, if totalSeconds >= 14400, show full day icon (green)
+                      if (isSaturday && totalSeconds >= 14400) {
+                        return (
+                          <td
+                            key={user._id + iso}
+                            className={cellClass + ' hover:bg-green-50'}
+                            onClick={() => openModal(user, iso)}
+                          >
+                            <div className="mx-auto flex items-center justify-center">
+                              <FaCheckCircle className="text-green-500 w-5 h-5 text-xl" title="Saturday: working hours ≥ 4h, counted as Full Day" />
+                            </div>
+                          </td>
+                        );
+                      }
+                      // Use only green for present (today)
                       if (isSunday) {
                         return (
                           <td
                             key={user._id + iso}
-                            className="text-center text-gray-400"
+                            className={cellClass + ' min-w-[120px]'}
                           >
-                            -
+                            <div className="mx-auto flex items-center justify-center">
+                              <span className="text-xs text-gray-500" title="Sunday (not counted)">-</span>
+                            </div>
                           </td>
                         );
                       }
-                                          
-                      if (isSaturday && workingHours >= 14400 ) {
-                        return (
-                          <td
-                            key={user._id + iso}
-                            className="text-center"
-                            onClick={() => openModal(user, iso)}
-                          >
-                            <FaCheckCircle
-                              className="text-green-500 text-xl inline"
-                              title="Saturday half day, counted as Full Day"
-                            />
-                          </td>
-                        );
-                      }
-
                       if (isToday) {
                         if (attendanceStatus === "full_day") {
                           return (
                             <td
                               key={user._id + iso}
-                              className="text-center"
+                              className={cellClass + ' hover:bg-green-50 min-w-[120px]'}
                               onClick={() => openModal(user, iso)}
                             >
-                              <FaCheckCircle
-                                className="text-green-500 text-xl inline"
-                                title="full day"
-                              />
+                              <div className="mx-auto flex items-center justify-center">
+                                <FaCheckCircle className="text-green-500 w-5 h-5 text-xl" title="Full Day" />
+                              </div>
                             </td>
                           );
                         } else if (attendanceStatus === "half_day") {
                           return (
                             <td
                               key={user._id + iso}
-                              className="text-center"
+                              className={cellClass + ' hover:bg-amber-50 min-w-[120px]'}
                               onClick={() => openModal(user, iso)}
                             >
-                              <FaCheckCircle
-                                className="text-amber-500 text-xl inline"
-                                title="half day"
-                              />
+                              <div className="mx-auto flex items-center justify-center">
+                                <FaCheckCircle className="text-amber-400 w-5 h-5 text-xl" title="Half Day" />
+                              </div>
                             </td>
                           );
                         } else if (attendanceStatus === "absent") {
                           return (
                             <td
                               key={user._id + iso}
-                              className="text-center"
+                              className={cellClass + ' hover:bg-red-50 min-w-[120px]'}
                               onClick={() => openModal(user, iso)}
                             >
-                              <FaTimesCircle
-                                className="text-red-500 text-xl inline"
-                                title="absent"
-                              />
+                              <div className="mx-auto flex items-center justify-center">
+                                <FaTimesCircle className="text-red-500 w-5 h-5 text-xl" title="Absent" />
+                              </div>
                             </td>
                           );
                         } else if (hasEntryToday) {
                           return (
                             <td
                               key={user._id + iso}
-                              className="text-center"
+                              className={cellClass + ' hover:bg-green-50 min-w-[120px]'}
                               onClick={() => openModal(user, iso)}
                             >
-                              <FaCheckCircle
-                                className="text-green-500 text-xl inline"
-                                title="Present (entry exists, status not set)"
-                              />
+                              <div className="mx-auto flex items-center justify-center">
+                                <FaCheckCircle className="text-green-500 w-5 h-5 text-xl" title="Present (entry exists, status not set)" />
+                              </div>
                             </td>
                           );
                         } else {
                           return (
                             <td
                               key={user._id + iso}
-                              className="text-center"
+                              className={cellClass + ' hover:bg-red-50 min-w-[120px]'}
                               onClick={() => openModal(user, iso)}
                             >
-                              <FaTimesCircle
-                                className="text-red-500 text-xl inline"
-                                title="absent (no entry)"
-                              />
+                              <div className="mx-auto flex items-center justify-center">
+                                <FaTimesCircle className="text-red-500 w-5 h-5 text-xl" title="Absent (no entry)" />
+                              </div>
                             </td>
                           );
                         }
                       }
-
                       if (!attendanceStatus) {
                         return (
                           <td
                             key={user._id + iso}
-                            className="text-center"
+                            className={cellClass + ' hover:bg-red-50 min-w-[120px]'}
                             onClick={() => openModal(user, iso)}
                           >
-                            <FaTimesCircle
-                              className="text-red-500 text-xl inline"
-                              title="absent (no status)"
-                            />
+                            <div className="mx-auto flex items-center justify-center">
+                              <FaTimesCircle className="text-red-500 w-5 h-5 text-xl" title="Absent (no status)" />
+                            </div>
                           </td>
                         );
                       } else if (attendanceStatus === "full_day") {
                         return (
                           <td
                             key={user._id + iso}
-                            className="text-center"
+                            className={cellClass + ' hover:bg-green-50 min-w-[120px]'}
                             onClick={() => openModal(user, iso)}
                           >
-                            <FaCheckCircle
-                              className="text-green-500 text-xl inline"
-                              title="full day"
-                            />
+                            <div className="mx-auto flex items-center justify-center">
+                              <FaCheckCircle className="text-green-500 w-5 h-5 text-xl" title="Full Day" />
+                            </div>
                           </td>
                         );
                       } else if (attendanceStatus === "half_day") {
                         return (
                           <td
                             key={user._id + iso}
-                            className="text-center"
+                            className={cellClass + ' hover:bg-amber-50 min-w-[120px]'}
                             onClick={() => openModal(user, iso)}
                           >
-                            <FaCheckCircle
-                              className="text-amber-500 text-xl inline"
-                              title="half day"
-                            />
+                            <div className="mx-auto flex items-center justify-center">
+                              <FaCheckCircle className="text-amber-400 w-5 h-5 text-xl" title="Half Day" />
+                            </div>
                           </td>
                         );
                       } else {
                         return (
                           <td
                             key={user._id + iso}
-                            className="text-center"
+                            className={cellClass + ' hover:bg-red-50 min-w-[120px]'}
                             onClick={() => openModal(user, iso)}
                           >
-                            <FaTimesCircle
-                              className="text-red-500 text-xl inline"
-                              title="absent"
-                            />
+                            <div className="mx-auto flex items-center justify-center">
+                              <FaTimesCircle className="text-red-500 w-5 h-5 text-xl" title="Absent" />
+                            </div>
                           </td>
                         );
                       }
                     })}
                   </tr>
                 ))}
-
-                {/* ✅ Proper summary row */}
-                <tr className="bg-gray-100 font-semibold">
-                  <td className="sticky left-0 z-10 px-6 py-4 text-sm font-medium text-gray-900 bg-gray-100">
-                    Total Summary
+                <tr className="font-semibold border-t-2 border-gray-200 bg-white">
+                  <td className="sticky left-0 z-10 px-8 py-5 text-sm font-semibold text-gray-900 bg-white border-r border-gray-200 shadow-sm align-middle min-w-[120px]">
+                    <div className="flex items-center space-x-2 justify-center">
+                      <FaChartBar className="w-4 h-4 text-gray-600" />
+                      <span>Summary</span>
+                    </div>
                   </td>
                   {users.map((user) => {
-                    const {
-                      fullDay = 0,
-                      halfDay = 0,
-                      absent = 0,
-                    } = userSummaryCounts[user._id] || {};
-
+                    const { fullDay = 0, halfDay = 0, absent = 0 } = userSummaryCounts[user._id] || {};
                     return (
                       <td
                         key={`total-summary-${user._id}`}
-                        className="text-center px-4 py-2"
+                        className="text-center px-2 md:px-4 py-3 md:py-5 bg-white border-t border-gray-200 align-middle min-w-[90px] md:min-w-[120px] text-xs md:text-base"
                       >
-                        <div className="text-green-600">
-                          Full Day: {fullDay}
+                        <div className="space-y-1 font-bold">
+                          <div className="text-green-600">Full Day: {fullDay}</div>
+                          <div className="text-amber-500">Half Day: {halfDay}</div>
+                          <div className="text-red-600">Absent: {absent}</div>
                         </div>
-                        <div className="text-amber-500">
-                          Half Day: {halfDay}
-                        </div>
-                        <div className="text-red-600">Absent: {absent}</div>
                       </td>
                     );
                   })}
@@ -603,47 +635,57 @@ users.forEach((user) => {
         </div>
       </div>
 
-      {/* Attendance Status update */}
+      {/* Attendance Status update Modal */}
       <Modal isOpen={isOpen} onClose={closeModal}>
-        <div className="bg-white rounded-xl shadow-2xl w-full max-w-md mx-auto">
-          <div className="border-b border-gray-200 px-6 py-4">
-            <h2 className="text-xl font-bold mb-2">Update Attendance Status</h2>
-            <p>
-              For {modalData.user?.fullName} on{" "}
-              {modalData.date ? new Date(modalData.date).toDateString() : ""}
+        <div className="bg-white rounded-2xl shadow w-full max-w-lg mx-4 transform transition-all border border-gray-100 mx-auto">
+          <div className="px-8 py-6 border-b border-gray-100 bg-gradient-to-r from-green-50 to-emerald-50 rounded-t-2xl">
+            <h2 className="text-2xl font-bold text-gray-900 mb-2">Update Attendance Status</h2>
+            <p className="text-sm text-gray-600">
+              For <span className="font-semibold text-gray-900">{modalData.user?.fullName}</span> on{" "}
+              <span className="font-semibold text-gray-900">
+                {modalData.date ? new Date(modalData.date).toLocaleDateString("en-US", {
+                  weekday: "long",
+                  year: "numeric",
+                  month: "long",
+                  day: "numeric"
+                }) : ""}
+              </span>
             </p>
           </div>
 
-          <div className="p-6 space-y-4">
-            {["absent", "half_day", "full_day"].map((status) => {
+          <div className="p-8 space-y-5">
+            {(["absent", "half_day", "full_day"] as const).map((status) => {
               const options = {
                 absent: {
                   icon: <FaUserSlash className="text-2xl" />,
                   title: "Absent",
                   desc: "Employee was not present",
-                  color: "indigo",
+                  color: "red",
+                  bgColor: "red",
                 },
                 half_day: {
                   icon: <FaClock className="text-2xl" />,
                   title: "Half Day",
                   desc: "Employee worked partial hours",
                   color: "amber",
+                  bgColor: "amber",
                 },
                 full_day: {
                   icon: <FaCalendarCheck className="text-2xl" />,
                   title: "Full Day",
                   desc: "Employee worked full hours",
                   color: "green",
+                  bgColor: "green",
                 },
               }[status];
 
               return (
                 <label
                   key={status}
-                  className={`block border-2 rounded-lg p-4 cursor-pointer flex items-center transition ${
+                  className={`block border-2 rounded-xl p-5 cursor-pointer transition-all duration-200 hover:shadow ${
                     modalData.status === status
-                      ? `border-${options?.color}-500 bg-${options?.color}-50 text-${options?.color}-700`
-                      : "border-gray-200 hover:border-blue-300"
+                      ? `border-${options?.color}-500 bg-${options?.bgColor}-50 text-${options?.color}-700 shadow`
+                      : "border-gray-200 hover:border-gray-300 bg-white"
                   }`}
                 >
                   <input
@@ -654,30 +696,42 @@ users.forEach((user) => {
                     onChange={handleStatusChange}
                     className="hidden"
                   />
-                  <div className="mr-4 text-gray-400">{options?.icon}</div>
-                  <div>
-                    <h4 className="font-medium">{options?.title}</h4>
-                    <p className="text-sm text-gray-500">{options?.desc}</p>
+                  <div className="flex items-center">
+                    <div className={`mr-5 p-4 rounded-xl ${
+                      modalData.status === status 
+                        ? `bg-${options?.color}-100 text-${options?.color}-600`
+                        : "text-gray-400 bg-gray-100"
+                    }`}>
+                      {options?.icon}
+                    </div>
+                    <div>
+                      <h4 className="font-bold text-lg">{options?.title}</h4>
+                      <p className="text-sm text-gray-500">{options?.desc}</p>
+                    </div>
                   </div>
                 </label>
               );
             })}
           </div>
 
-          <div className="border-t border-gray-200 px-6 py-4 flex justify-end space-x-3">
+          <div className="border-t border-gray-100 px-8 py-6 flex justify-end space-x-4 bg-gray-50 rounded-b-2xl">
             <button
               onClick={closeModal}
-              className="px-4 py-2 border border-gray-300 rounded-md text-gray-700 hover:bg-gray-50 transition"
+              className="px-7 py-3 text-gray-700 font-semibold rounded-xl hover:bg-gray-100 border border-gray-200 shadow-sm transition-colors"
             >
               Cancel
             </button>
             <button
-              className="bg-indigo-600 text-white px-4 py-2 rounded disabled:opacity-50"
+              className={`px-7 py-3 font-semibold rounded-xl transition-all shadow text-base border border-green-600
+                ${!modalData.status
+                  ? "bg-gray-200 text-gray-400 cursor-not-allowed border-gray-200"
+                  : "bg-gradient-to-r from-green-600 to-emerald-600 text-white hover:from-green-700 hover:to-emerald-700 transform hover:scale-105"
+                }`}
               onClick={handleSave}
               disabled={!modalData.status}
             >
-              <FaSave className="inline mr-2" />
-              Save
+              <FaSave className="inline mr-2 w-5 h-5" />
+              Save Changes
             </button>
           </div>
         </div>
