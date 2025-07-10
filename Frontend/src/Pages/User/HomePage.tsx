@@ -614,13 +614,29 @@ const HomePage: React.FC = () => {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="mb-8">
             <div className="flex flex-col md:flex-row gap-4 items-start md:items-center justify-between">
-              <div className="w-full md:w-auto">
-                <h1 className="text-3xl font-bold text-gray-900">
-                  Welcome back, {user?.fullName}
-                </h1>
-                <p className="mt-2 text-sm text-gray-600">
-                  Today is <span className="font-medium">{currentDate}</span>
-                </p>
+              <div className="w-full md:w-auto flex items-center gap-4">
+              <div className="relative">
+                  <img
+                    className="h-16 w-16 rounded-full object-cover border-4 border-white shadow-lg"
+                    src={`https://ui-avatars.com/api/?name=${user?.fullName}`}
+                    alt="User profile"
+                  />
+                  {status === "clocked_in" ? (
+                    <span className="absolute bottom-0 right-0 h-5 w-5 bg-green-500 rounded-full border-2 border-white shadow"></span>
+                  ) : status === "clocked_out_for_break" ? (
+                    <span className="absolute bottom-0 right-0 h-5 w-5 bg-amber-500 rounded-full border-2 border-white shadow"></span>
+                  ) : status === "clocked_out" ? (
+                    <span className="absolute bottom-0 right-0 h-5 w-5 bg-red-500 rounded-full border-2 border-white shadow"></span>
+                  ) : null}
+                </div>
+                <div className="ml-2">
+                  <h1 className="text-3xl font-bold text-gray-900">
+                    Welcome back, {user?.fullName}
+                  </h1>
+                  <p className="px-1 mt-2 text-sm text-gray-600">
+                    Today is {<span className="font-medium">{currentDate}</span>}
+                  </p>
+                </div>
               </div>
 
               <div className="w-full md:w-auto mt-4 md:mt-0">
