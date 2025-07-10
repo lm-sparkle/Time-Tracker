@@ -404,8 +404,22 @@ const HomePage: React.FC = () => {
         minutes
       ).padStart(2, "0")}:${String(seconds).padStart(2, "0")}`;
       setTotalWorkingTime(formattedTime);
-    } catch (error) {
-      console.error("Error fetching user times:", error);
+    } catch (error: any) {
+      const message = error.response?.data || error.message;
+      if (
+        error.response?.status === 403 &&
+        message === "Access denied: Your IP is not allowed."
+      ) {
+        Toast.fire({
+          icon: "error",
+          title: message || "Access denied: Your IP is not allowed.",
+        });
+      } else if (error.response?.status >= 400) {
+        Toast.fire({
+          icon: "error",
+          title: message || "Something went wrong",
+        });
+      }
     }
   };
 
@@ -424,8 +438,22 @@ const HomePage: React.FC = () => {
       setUserLatestTime(response.data);
       sessionStorage.setItem("time_Id", response.data?.[0]?._id);
       setStatus(response.data?.[0]?.status || "not_clocked_in");
-    } catch (err) {
-      console.error(err);
+    } catch (error: any) {
+      const message = error.response?.data || error.message;
+      if (
+        error.response?.status === 403 &&
+        message === "Access denied: Your IP is not allowed."
+      ) {
+        Toast.fire({
+          icon: "error",
+          title: message || "Access denied: Your IP is not allowed.",
+        });
+      } else if (error.response?.status >= 400) {
+        Toast.fire({
+          icon: "error",
+          title: message || "Something went wrong",
+        });
+      }
     }
   };
 
@@ -446,11 +474,22 @@ const HomePage: React.FC = () => {
       );
 
       setFetchedEntriesForAttendance(response.data);
-    } catch (error) {
-      Toast.fire({
-        icon: "error",
-        title: "Failed to fetch attendance data",
-      });
+    } catch (error: any) {
+      const message = error.response?.data || error.message;
+      if (
+        error.response?.status === 403 &&
+        message === "Access denied: Your IP is not allowed."
+      ) {
+        Toast.fire({
+          icon: "error",
+          title: message || "Access denied: Your IP is not allowed.",
+        });
+      } else if (error.response?.status >= 400) {
+        Toast.fire({
+          icon: "error",
+          title: message || "Something went wrong",
+        });
+      }
     }
   };
 
@@ -459,49 +498,49 @@ const HomePage: React.FC = () => {
   }, []);
 
   const attendanceStatusMap = useMemo(() => {
-      const map: Record<
-        string,
-        { attendanceStatus: string; workingHours: string; totalSeconds: number }
-      > = {};
-    
-      fetchedEntriesForAttendance.forEach((entry) => {
-        const key = `${entry.userId}_${entry.dateString}`;
-        const seconds = timeStrToSeconds(entry.workingHours);
-    
-        if (!map[key]) {
-          map[key] = {
-            attendanceStatus: entry.attendanceStatus,
-            workingHours: entry.workingHours,
-            totalSeconds: seconds,
-          };
-        } else {
-          map[key].totalSeconds += seconds;
-    
-          map[key].attendanceStatus = entry.attendanceStatus;
-        }
-      });
-   
-      return map;
-    }, [fetchedEntriesForAttendance]);
+    const map: Record<
+      string,
+      { attendanceStatus: string; workingHours: string; totalSeconds: number }
+    > = {};
+
+    fetchedEntriesForAttendance.forEach((entry) => {
+      const key = `${entry.userId}_${entry.dateString}`;
+      const seconds = timeStrToSeconds(entry.workingHours);
+
+      if (!map[key]) {
+        map[key] = {
+          attendanceStatus: entry.attendanceStatus,
+          workingHours: entry.workingHours,
+          totalSeconds: seconds,
+        };
+      } else {
+        map[key].totalSeconds += seconds;
+
+        map[key].attendanceStatus = entry.attendanceStatus;
+      }
+    });
+
+    return map;
+  }, [fetchedEntriesForAttendance]);
 
   const calculateUserAttendance = useMemo<AttendanceSummary>(() => {
     let fullDay = 0;
     let halfDay = 0;
     let absent = 0;
-  
+
     const today = new Date();
     const currentDate = today.getDate();
     const currentMonth = today.getMonth();
     const currentYear = today.getFullYear();
-  
+
     const pad = (num: number) => String(num).padStart(2, '0');
-  
+
     const todayISO = `${currentYear}-${pad(currentMonth + 1)}-${pad(currentDate)}`;
-  
+
     for (let day = 1; day <= currentDate; day++) {
       const date = new Date(currentYear, currentMonth, day);
-      if (date.getDay() === 0) continue; 
-  
+      if (date.getDay() === 0) continue;
+
       const formattedDate = `${currentYear}-${pad(currentMonth + 1)}-${pad(day)}`;
       const key = `${user?.id}_${formattedDate}`;
       const attendanceData = attendanceStatusMap[key];
@@ -509,17 +548,17 @@ const HomePage: React.FC = () => {
       const totalSeconds = attendanceData?.totalSeconds;
       const isToday = formattedDate === todayISO;
       const hasEntryToday = fetchedEntriesForAttendance.some(
-          (entry) => entry.userId === user?.id && entry.dateString === todayISO
-        );
+        (entry) => entry.userId === user?.id && entry.dateString === todayISO
+      );
 
-        if (
-          date.getDay() === 6 &&
-          totalSeconds >= 14400
-        ) {
-          fullDay++;
-          continue;
-        }
-  
+      if (
+        date.getDay() === 6 &&
+        totalSeconds >= 14400
+      ) {
+        fullDay++;
+        continue;
+      }
+
       if (isToday) {
         if (status === "full_day") {
           fullDay++;
@@ -542,7 +581,7 @@ const HomePage: React.FC = () => {
         }
       }
     }
-  
+
     return { fullDay, halfDay, absent };
   }, [attendanceStatusMap, user?.id, userTimes]);
 
@@ -551,17 +590,17 @@ const HomePage: React.FC = () => {
   }, [calculateUserAttendance]);
 
   const workedSeconds =
-  status === "clocked_in"
-    ? timeToSeconds(totalWorkingTime) + totalSecondsToday
-    : timeToSeconds(totalWorkingTime);
+    status === "clocked_in"
+      ? timeToSeconds(totalWorkingTime) + totalSecondsToday
+      : timeToSeconds(totalWorkingTime);
 
   const dailyTargetSeconds = isSaturday ? 14400 : 28800;
 
   const progressPercent = Math.min(
-  100,
-  // Math.round((workedSeconds / dailyTargetSeconds) * 100)
-  parseFloat(((workedSeconds / dailyTargetSeconds) * 100).toFixed(2))
-);
+    100,
+    // Math.round((workedSeconds / dailyTargetSeconds) * 100)
+    parseFloat(((workedSeconds / dailyTargetSeconds) * 100).toFixed(2))
+  );
 
   const handleSubmit = async (e: FormEvent) => {
     e.preventDefault();
@@ -615,7 +654,7 @@ const HomePage: React.FC = () => {
           <div className="mb-8">
             <div className="flex flex-col md:flex-row gap-4 items-start md:items-center justify-between">
               <div className="w-full md:w-auto flex items-center gap-4">
-              <div className="relative">
+                <div className="relative">
                   <img
                     className="h-16 w-16 rounded-full object-cover border-4 border-white shadow-lg"
                     src={`https://ui-avatars.com/api/?name=${user?.fullName}`}
@@ -693,17 +732,17 @@ const HomePage: React.FC = () => {
                   </div>
                 </div>
                 <div className="mt-3 flex items-center text-sm text-gray-500 px-1">
-                            <FaClock className="mr-2" />
-                            <span>Since {userLatestTime[0]?.inTime
-                        ? new Date(
-                            userLatestTime[0]?.inTime
-                          ).toLocaleTimeString('en-US', {
-                            hour: "2-digit",
-                            minute: "2-digit",
-                            second: "2-digit",
-                          })
-                        : "--:--:--"}</span>
-                        </div>
+                  <FaClock className="mr-2" />
+                  <span>Since {userLatestTime[0]?.inTime
+                    ? new Date(
+                      userLatestTime[0]?.inTime
+                    ).toLocaleTimeString('en-US', {
+                      hour: "2-digit",
+                      minute: "2-digit",
+                      second: "2-digit",
+                    })
+                    : "--:--:--"}</span>
+                </div>
               </div>
             </div>
             {/* Total Hours Today */}
@@ -724,27 +763,27 @@ const HomePage: React.FC = () => {
                       <div className="text-2xl font-semibold text-gray-900">
                         {status === "clocked_in"
                           ? formatTime(
-                              (totalWorkingTime
-                                ? totalWorkingTime
-                                    .split(":")
-                                    .reduce((acc, time) => 60 * acc + +time, 0)
-                                : 0) + totalSecondsToday
-                            )
+                            (totalWorkingTime
+                              ? totalWorkingTime
+                                .split(":")
+                                .reduce((acc, time) => 60 * acc + +time, 0)
+                              : 0) + totalSecondsToday
+                          )
                           : totalWorkingTime || "00:00:00"}
                       </div>
                     </dd>
                   </div>
-                  
+
                 </div>
-              <div className="mt-3">
-                            <div className="flex items-center justify-between text-sm text-gray-500 mb-1">
-                                <span>Daily Target: {isSaturday ? "4" : "8"}h</span>
-                                <span>{progressPercent}%</span>
-                            </div>
-                            <div className="w-full bg-gray-200 rounded-full h-1.5">
-                                <div className="bg-gradient-to-r from-green-400 to-teal-500 h-1.5 rounded-full" style={{width: `${progressPercent}%` }}></div>
-                            </div>
-                        </div>
+                <div className="mt-3">
+                  <div className="flex items-center justify-between text-sm text-gray-500 mb-1">
+                    <span>Daily Target: {isSaturday ? "4" : "8"}h</span>
+                    <span>{progressPercent}%</span>
+                  </div>
+                  <div className="w-full bg-gray-200 rounded-full h-1.5">
+                    <div className="bg-gradient-to-r from-green-400 to-teal-500 h-1.5 rounded-full" style={{ width: `${progressPercent}%` }}></div>
+                  </div>
+                </div>
               </div>
             </div>
             {/* Total Break Today */}
@@ -770,18 +809,18 @@ const HomePage: React.FC = () => {
                     </dd>
                   </div>
                 </div>
-              <div className="mt-3 flex items-center text-sm text-gray-500 px-1">
-                            <FaStopwatch className="mr-2" />
-                            <span>Since {userLatestTime[0]?.outTime
-                        ? new Date(
-                            userLatestTime[0]?.outTime
-                          ).toLocaleTimeString('en-US', {
-                            hour: "2-digit",
-                            minute: "2-digit",
-                            second: "2-digit",
-                          })
-                        : "--:--:--"}</span>
-                        </div>
+                <div className="mt-3 flex items-center text-sm text-gray-500 px-1">
+                  <FaStopwatch className="mr-2" />
+                  <span>Since {userLatestTime[0]?.outTime
+                    ? new Date(
+                      userLatestTime[0]?.outTime
+                    ).toLocaleTimeString('en-US', {
+                      hour: "2-digit",
+                      minute: "2-digit",
+                      second: "2-digit",
+                    })
+                    : "--:--:--"}</span>
+                </div>
               </div>
             </div>
           </div>
@@ -799,10 +838,10 @@ const HomePage: React.FC = () => {
                 )
               }
               className={`time-card bg-gradient-to-br from-green-50 to-green-100 border border-green-200 overflow-hidden shadow rounded-lg text-left ${(status === "not_clocked_in" ||
-                  status === "clocked_out_for_break") &&
-                  !isClockInLoading
-                  ? "cursor-pointer hover:shadow-lg transition-shadow"
-                  : "opacity-50 cursor-not-allowed"
+                status === "clocked_out_for_break") &&
+                !isClockInLoading
+                ? "cursor-pointer hover:shadow-lg transition-shadow"
+                : "opacity-50 cursor-not-allowed"
                 }`}
             >
               <div className="px-4 py-5 sm:p-6 text-center h-full">
@@ -846,8 +885,8 @@ const HomePage: React.FC = () => {
               onClick={handleClockOut}
               disabled={status !== "clocked_in" || isClockOutLoading}
               className={`time-card bg-gradient-to-br from-amber-50 to-amber-100 border border-amber-200 overflow-hidden shadow rounded-lg text-left ${status === "clocked_in" && !isClockOutLoading
-                  ? "cursor-pointer hover:shadow-lg transition-shadow"
-                  : "opacity-50 cursor-not-allowed"
+                ? "cursor-pointer hover:shadow-lg transition-shadow"
+                : "opacity-50 cursor-not-allowed"
                 }`}
             >
               <div className="px-4 py-5 sm:p-6 text-center h-full">
@@ -891,8 +930,8 @@ const HomePage: React.FC = () => {
                 !(status === "clocked_in" || status === "clocked_out_for_break")
               }
               className={`time-card bg-gradient-to-br from-red-50 to-red-100 border border-red-200 overflow-hidden shadow rounded-lg text-left ${status === "clocked_in" || status === "clocked_out_for_break"
-                  ? "cursor-pointer hover:shadow-lg transition-shadow"
-                  : "opacity-50 cursor-not-allowed"
+                ? "cursor-pointer hover:shadow-lg transition-shadow"
+                : "opacity-50 cursor-not-allowed"
                 }`}
             >
               <div className="px-4 py-5 sm:p-6 text-center">

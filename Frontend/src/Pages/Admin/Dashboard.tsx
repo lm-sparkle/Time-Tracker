@@ -10,14 +10,15 @@ import React, {
 } from "react";
 import {
   FaPlus,
-  FaChevronLeft,
-  FaChevronRight,
   FaTrash,
   FaEdit,
   FaCircle,
   FaTimesCircle,
   FaExclamationCircle,
-  FaCheckCircle,
+  FaUserCheck,
+  FaUsers,
+  FaUserTimes,
+  FaClock,
 } from "react-icons/fa";
 import Modal from "../../Components/Modal";
 import { Toast } from "../../Components/Toast";
@@ -33,14 +34,9 @@ type User = {
   isActive: boolean;
 };
 
-type Pagination = {
-  currentPage: number;
-  totalPages: number;
-  totalUsers: number;
-};
-
 const Dashboard: React.FC = () => {
   const [users, setUsers] = useState<User[]>([]);
+  const [totalUsers, setTotalUsers] = useState(0);
   const [userTimeEntries, setUserTimeEntries] = useState<
     {
       userId: string;
@@ -50,11 +46,7 @@ const Dashboard: React.FC = () => {
       workingHours: String;
     }[]
   >([]);
-  const [pagination, setPagination] = useState<Pagination>({
-    currentPage: 1,
-    totalPages: 1,
-    totalUsers: 0,
-  });
+
   const [loading, setLoading] = useState(false);
 
   const [showAddModal, setShowAddModal] = useState(false);
@@ -89,24 +81,16 @@ const Dashboard: React.FC = () => {
 
   const API_URL = import.meta.env.VITE_API_URL as string;
 
-  const fetchUsers = async (page = 1) => {
+  const fetchUsers = async () => {
     setLoading(true);
     try {
-      const response = await api.get(`${API_URL}users`, {
-        params: {
-          page,
-          limit: 10,
-        },
+      const response = await api.get(`${API_URL}users/all`, {
         headers: {
           Authorization: `Bearer ${sessionStorage.getItem("token")}`,
         },
       });
-      setUsers(response.data.users);
-      setPagination({
-        currentPage: response.data.currentPage,
-        totalPages: response.data.totalPages,
-        totalUsers: response.data.totalUsers,
-      });
+      setUsers(response.data);
+      setTotalUsers(response.data.length);
     } catch (error) {
       Toast.fire({
         icon: "error",
@@ -151,7 +135,7 @@ const Dashboard: React.FC = () => {
         icon: "success",
         title: `User ${isActive ? "deactivated" : "activated"}  successfully`,
       });
-      fetchUsers(pagination.currentPage);
+      fetchUsers();
     } catch (error) {
       Toast.fire({
         icon: "error",
@@ -161,9 +145,9 @@ const Dashboard: React.FC = () => {
   };
 
   useEffect(() => {
-    fetchUsers(pagination.currentPage);
+    fetchUsers();
     fetchUserTimeEntries();
-  }, [pagination.currentPage]);
+  }, []);
 
   const handleAddUser = async (e: FormEvent) => {
     e.preventDefault();
@@ -201,7 +185,7 @@ const Dashboard: React.FC = () => {
         icon: "success",
         title: "User created successfully",
       });
-      fetchUsers(1);
+      fetchUsers();
       closeModals();
     } catch (err: any) {
       Toast.fire({
@@ -232,7 +216,7 @@ const Dashboard: React.FC = () => {
         icon: "success",
         title: "User updated successfully",
       });
-      fetchUsers(pagination.currentPage);
+      fetchUsers();
       closeModals();
     } catch (error: any) {
       Toast.fire({
@@ -262,7 +246,7 @@ const Dashboard: React.FC = () => {
             icon: "success",
             title: "User deleted successfully",
           });
-          fetchUsers(pagination.currentPage);
+          fetchUsers();
         } catch (error: any) {
           Toast.fire({
             icon: "error",
@@ -333,53 +317,6 @@ const Dashboard: React.FC = () => {
     }
   };
 
-  const renderPagination = () => (
-    <nav className="relative z-0 inline-flex rounded-md shadow-sm -space-x-px">
-      <button
-        onClick={() =>
-          setPagination((prev) => ({
-            ...prev,
-            currentPage: Math.max(1, prev.currentPage - 1),
-          }))
-        }
-        disabled={pagination.currentPage === 1}
-        className="relative inline-flex items-center px-2 py-2 rounded-l-md border border-gray-300 bg-white text-sm font-medium text-gray-500 hover:bg-gray-50"
-      >
-        <FaChevronLeft />
-      </button>
-      {Array.from({ length: pagination.totalPages }, (_, i) => (
-        <button
-          key={i + 1}
-          onClick={() =>
-            setPagination((prev) => ({
-              ...prev,
-              currentPage: i + 1,
-            }))
-          }
-          className={`relative inline-flex items-center px-4 py-2 border text-sm font-medium ${
-            pagination.currentPage === i + 1
-              ? "z-10 bg-indigo-50 border-indigo-500 text-indigo-600"
-              : "bg-white border-gray-300 text-gray-500 hover:bg-gray-50"
-          }`}
-        >
-          {i + 1}
-        </button>
-      ))}
-      <button
-        onClick={() =>
-          setPagination((prev) => ({
-            ...prev,
-            currentPage: Math.min(prev.totalPages, prev.currentPage + 1),
-          }))
-        }
-        disabled={pagination.currentPage === pagination.totalPages}
-        className="relative inline-flex items-center px-2 py-2 rounded-r-md border border-gray-300 bg-white text-sm font-medium text-gray-500 hover:bg-gray-50"
-      >
-        <FaChevronRight />
-      </button>
-    </nav>
-  );
-
   const handleFormChange = (
     e: ChangeEvent<HTMLInputElement | HTMLSelectElement>
   ) => {
@@ -394,72 +331,143 @@ const Dashboard: React.FC = () => {
     <div className="font-sans antialiased min-h-screen">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         <header>
-          <div className="flex justify-between items-center mb-8">
-            <div>
-              <h1 className="text-2xl font-bold text-gray-800">
-                User Management
-              </h1>
-              <p className="pt-2 px-1 text-sm text-gray-600">
-                Today is{" "}
-                <span className="font-medium">{new Date().toDateString()}</span>
-              </p>
+        <div className="mb-8">
+          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+            <div className="space-y-2">
+              <div className="flex items-center space-x-3">
+                <div className="p-3 bg-blue-600 rounded-xl shadow-lg">
+                  <FaUsers className="w-6 h-6 text-white" />
+                </div>
+                <div>
+                  <h1 className="text-3xl font-bold text-gray-900">
+                    User Management
+                  </h1>
+                  <p className="text-gray-600">
+                    Manage your team members and track their activities
+                  </p>
+                </div>
+              </div>
+              <div className="flex items-center space-x-4 text-sm text-gray-500 px-1">
+                <div className="flex items-center space-x-2">
+                  <FaClock className="w-4 h-4" />
+                  <span>Today: {new Date().toDateString()}</span>
+                </div>
+                <div className="flex items-center space-x-2">
+                  <FaUsers className="w-4 h-4" />
+                  <span>{totalUsers} Total Users</span>
+                </div>
+              </div>
             </div>
             <button
               onClick={openAddModal}
-              className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500"
+              className="inline-flex items-center px-6 py-3 bg-gradient-to-r from-blue-600 to-blue-700 text-white font-semibold rounded-xl shadow-lg hover:from-blue-700 hover:to-blue-800 focus:outline-none focus:ring-4 focus:ring-blue-300 transition-all duration-200 transform hover:scale-105"
             >
-              <FaPlus className="mr-2" /> Add User
+              <FaPlus className="mr-2 w-4 h-4" />
+              Add New User
             </button>
           </div>
+        </div>
         </header>
 
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+          <div className="bg-white rounded-2xl shadow-lg p-6 border border-gray-100">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm font-medium text-gray-600">Total Users</p>
+                <p className="text-3xl font-bold text-gray-900">{totalUsers}</p>
+              </div>
+              <div className="p-3 bg-blue-100 rounded-xl">
+                <FaUsers className="w-6 h-6 text-blue-600" />
+              </div>
+            </div>
+          </div>
+
+          <div className="bg-white rounded-2xl shadow-lg p-6 border border-gray-100">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm font-medium text-gray-600">Active Users</p>
+                <p className="text-3xl font-bold text-green-600">
+                  {users.filter(user => user.isActive).length}
+                </p>
+              </div>
+              <div className="p-3 bg-green-100 rounded-xl">
+                <FaUserCheck className="w-6 h-6 text-green-600" />
+              </div>
+            </div>
+          </div>
+
+          <div className="bg-white rounded-2xl shadow-lg p-6 border border-gray-100">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm font-medium text-gray-600">Online Users</p>
+                <p className="text-3xl font-bold text-purple-600">
+                  {users.filter(user =>
+                    userTimeEntries.some(entry =>
+                      entry.userId === user._id && entry.outTime === null
+                    )
+                  ).length}
+                </p>
+              </div>
+              <div className="p-3 bg-purple-100 rounded-xl">
+                <FaCircle className="w-6 h-6 text-purple-600" />
+              </div>
+            </div>
+          </div>
+        </div>
         {/* Users Table */}
-        <div className="bg-white shadow overflow-hidden sm:rounded-lg">
+        <div className="bg-white rounded-2xl shadow-xl border border-gray-100 overflow-hidden">
           <div className="overflow-x-auto">
             <table className="min-w-full divide-y divide-gray-200">
               <thead className="bg-gray-50">
                 <tr>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Name
+                  <th className="px-6 py-4 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">
+                    User
                   </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Email
+                  <th className="px-6 py-4 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">
+                    Contact
                   </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Working Hours(hh:mm:ss)
+                  <th className="px-6 py-4 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">
+                    Working Hours
                   </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Last Active
+                  <th className="px-6 py-4 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">
+                    Last Activity
                   </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Tracking Status
+                  <th className="px-6 py-4 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">
+                    Status
                   </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Account Status
+                  <th className="px-6 py-4 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">
+                    Account
                   </th>
-                  <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  <th className="px-6 py-4 text-right text-xs font-semibold text-gray-600 uppercase tracking-wider">
                     Actions
                   </th>
                 </tr>
               </thead>
-              <tbody className="bg-white divide-y divide-gray-200">
+              <tbody className="bg-white divide-y divide-gray-100">
                 {loading ? (
                   <tr>
-                    <td colSpan={6} className="text-center py-6 text-gray-500">
-                      Loading...
+                    <td colSpan={7} className="text-center py-12">
+                      <div className="flex items-center justify-center space-x-2">
+                        <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-blue-600"></div>
+                        <span className="text-gray-500">Loading users...</span>
+                      </div>
                     </td>
                   </tr>
                 ) : users.length === 0 ? (
                   <tr>
-                    <td colSpan={6} className="text-center py-6 text-gray-500">
-                      No users found.
+                    <td colSpan={7} className="text-center py-12">
+                      <div className="text-gray-500">
+                        <FaUsers className="w-12 h-12 mx-auto mb-4 text-gray-300" />
+                        <p className="text-lg font-medium">No users found</p>
+                        <p className="text-sm">Get started by adding your first user</p>
+                      </div>
                     </td>
                   </tr>
                 ) : (
                   users.map((user) => (
                     <tr
                       key={user._id}
-                      className="hover:bg-gray-50 cursor-pointer"
+                      className="hover:bg-gray-50 transition-colors duration-200 cursor-pointer group"
                       onMouseEnter={(e) => {
                         const rect = (
                           e.currentTarget as HTMLElement
@@ -477,16 +485,16 @@ const Dashboard: React.FC = () => {
                             return timeA - timeB;
                           });
 
-                          let trackerStatus = "Not Clocked In";
-                          if (userEntries.length > 0) {
-                            const latest = userEntries[userEntries.length - 1];
-                            if (latest.status === "clocked_in")
-                              trackerStatus = "Clocked In";
-                            else if (latest.status === "clocked_out_for_break")
-                              trackerStatus = "On Break";
-                            else if (latest.status === "clocked_out")
-                              trackerStatus = "Clocked Out";
-                          }
+                        let trackerStatus = "Not Clocked In";
+                        if (userEntries.length > 0) {
+                          const latest = userEntries[userEntries.length - 1];
+                          if (latest.status === "clocked_in")
+                            trackerStatus = "Clocked In";
+                          else if (latest.status === "clocked_out_for_break")
+                            trackerStatus = "On Break";
+                          else if (latest.status === "clocked_out")
+                            trackerStatus = "Clocked Out";
+                        }
 
                         let totalLoggedSeconds = 0;
                         userEntries.forEach((entry, _i) => {
@@ -506,7 +514,7 @@ const Dashboard: React.FC = () => {
                         if (
                           userEntries.length > 0 &&
                           userEntries[userEntries.length - 1].status ===
-                            "clocked_in" &&
+                          "clocked_in" &&
                           userEntries[userEntries.length - 1].inTime &&
                           !userEntries[userEntries.length - 1].outTime
                         ) {
@@ -541,15 +549,15 @@ const Dashboard: React.FC = () => {
                         if (
                           userEntries.length > 0 &&
                           userEntries[userEntries.length - 1].status ===
-                            "clocked_out_for_break" &&
+                          "clocked_out_for_break" &&
                           userEntries[userEntries.length - 1].outTime
                         ) {
                           const lastOut = userEntries[userEntries.length - 1]
                             .outTime
                             ? new Date(
-                                userEntries[userEntries.length - 1].outTime ||
-                                  ""
-                              ).getTime()
+                              userEntries[userEntries.length - 1].outTime ||
+                              ""
+                            ).getTime()
                             : 0;
                           totalBreakSeconds += Math.floor(
                             (Date.now() - lastOut) / 1000
@@ -574,24 +582,20 @@ const Dashboard: React.FC = () => {
                           x: rect.left + rect.width / 2,
                           y: rect.top - 10,
                           content: (
-                            <div>
-                              <div className="mb-2 text-sm font-bold text-gray-800">
-                                Tracker Status:{" "}
-                                <span className="font-normal">
-                                  {trackerStatus}
-                                </span>
-                              </div>
-                              <div className="mb-2 text-sm font-bold text-gray-800">
-                                Logged Time:{" "}
-                                <span className="font-normal">
-                                  {formatTime(totalLoggedSeconds)}
-                                </span>
-                              </div>
-                              <div className="mb-2 text-sm font-bold text-gray-800">
-                                Break Time:{" "}
-                                <span className="font-normal">
-                                  {formatTime(totalBreakSeconds)}
-                                </span>
+                            <div className="bg-white p-4 rounded-xl shadow-2xl border border-gray-200 min-w-[280px]">
+                              <div className="space-y-3">
+                                <div className="flex items-center justify-between">
+                                  <span className="text-sm font-semibold text-gray-700">Tracker Status:</span>
+                                  <span className="text-sm text-gray-600">{trackerStatus}</span>
+                                </div>
+                                <div className="flex items-center justify-between">
+                                  <span className="text-sm font-semibold text-gray-700">Logged Time:</span>
+                                  <span className="text-sm text-green-600 font-mono">{formatTime(totalLoggedSeconds)}</span>
+                                </div>
+                                <div className="flex items-center justify-between">
+                                  <span className="text-sm font-semibold text-gray-700">Break Time:</span>
+                                  <span className="text-sm text-orange-600 font-mono">{formatTime(totalBreakSeconds)}</span>
+                                </div>
                               </div>
                             </div>
                           ),
@@ -602,23 +606,42 @@ const Dashboard: React.FC = () => {
                       }
                     >
                       <td className="px-6 py-4 whitespace-nowrap">
-                        {user.fullName}
+                        <div className="flex items-center">
+                          <div className="flex-shrink-0 h-10 w-10">
+                            <img
+                              className="h-10 w-10 rounded-full"
+                              src={`https://ui-avatars.com/api/?name=${encodeURIComponent(
+                                user.fullName
+                              )}&background=6366f1&color=fff&size=40`}
+                              alt=""
+                            />
+                          </div>
+                          <div className="ml-4">
+                            <div className="text-sm font-semibold text-gray-900">
+                              {user.fullName}
+                            </div>
+                            <div className="text-sm text-gray-500 capitalize">
+                              {user.role}
+                            </div>
+                          </div>
+                        </div>
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap">
-                        {user.email}
+                        <div className="text-sm text-gray-900">{user.email}</div>
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap">
-                        {userTimeEntries.filter(
-                          (entry) => entry.userId === user._id
-                        ).length > 0
-                          ? (() => {
+                        <div className="text-sm font-mono text-gray-900">
+                          {userTimeEntries.filter(
+                            (entry) => entry.userId === user._id
+                          ).length > 0
+                            ? (() => {
                               const totalWorkedMs = userTimeEntries
                                 .filter((entry) => entry.userId === user._id)
                                 .reduce((total, entry) => {
                                   const entryDuration =
                                     entry.outTime && entry.inTime
                                       ? new Date(entry.outTime).getTime() -
-                                        new Date(entry.inTime).getTime()
+                                      new Date(entry.inTime).getTime()
                                       : 0;
                                   return total + entryDuration;
                                 }, 0);
@@ -639,14 +662,15 @@ const Dashboard: React.FC = () => {
                                 seconds
                               ).padStart(2, "0")}`;
                             })()
-                          : 0}
+                            : "00:00:00"}
+                        </div>
                       </td>
-
                       <td className="px-6 py-4 whitespace-nowrap">
-                        {userTimeEntries.filter(
-                          (entry) => entry.userId === user._id
-                        ).length > 0
-                          ? (() => {
+                        <div className="text-sm text-gray-900">
+                          {userTimeEntries.filter(
+                            (entry) => entry.userId === user._id
+                          ).length > 0
+                            ? (() => {
                               const latestEntry = userTimeEntries
                                 .filter((entry) => entry.userId === user._id)
                                 .sort((a, b) => {
@@ -663,60 +687,65 @@ const Dashboard: React.FC = () => {
                                 ? new Date(latestEntry.outTime).toLocaleString()
                                 : "-";
                             })()
-                          : "No entries"}
+                            : "No entries"}
+                        </div>
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap">
                         {userTimeEntries.some(
                           (entry) =>
                             entry.userId === user._id && entry.outTime === null
                         ) ? (
-                          <span className="inline-flex items-center px-2 py-1 rounded text-xs font-medium bg-green-100 text-green-500">
-                            <FaCircle className="mr-1" /> Online
+                          <span className="inline-flex items-center px-3 py-1 rounded-full text-xs font-semibold bg-green-100 text-green-800">
+                            <FaCircle className="mr-1.5 w-2 h-2 text-green-500" />
+                            Online
                           </span>
                         ) : (
-                          <span className="inline-flex items-center px-2 py-1 rounded text-xs font-medium bg-gray-100">
-                            <FaCircle className="mr-1 text-gray-400" /> Offline
+                          <span className="inline-flex items-center px-3 py-1 rounded-full text-xs font-semibold bg-gray-100 text-gray-600">
+                            <FaCircle className="mr-1.5 w-2 h-2 text-gray-400" />
+                            Offline
                           </span>
                         )}
                       </td>
-                      <td className="px-6 py-4 whitespace-nowrap cursor-pointer">
+                      <td className="px-6 py-4 whitespace-nowrap">
                         <button
                           onClick={() => openStatusModal(user)}
-                          className={`inline-flex items-center px-2 py-1 rounded text-xs font-medium cursor-pointer ${
-                            user.isActive
-                              ? "bg-green-100 text-green-700"
-                              : "bg-red-200 text-red-600"
-                          }`}
+                          className={`inline-flex items-center px-3 py-1 rounded-full text-xs font-semibold transition-colors ${user.isActive
+                            ? "bg-green-100 text-green-800 hover:bg-green-200"
+                            : "bg-red-100 text-red-800 hover:bg-red-200"
+                            }`}
                         >
                           {user.isActive ? (
                             <>
-                              <FaCheckCircle className="mr-1" /> Active
+                              <FaUserCheck className="mr-1.5 w-3 h-3" />
+                              Active
                             </>
                           ) : (
                             <>
-                              <FaTimesCircle className="mr-1" /> Inactive
+                              <FaUserTimes className="mr-1.5 w-3 h-3" />
+                              Inactive
                             </>
                           )}
                         </button>
                       </td>
-
-                      <td className="px-6 py-4 whitespace-nowrap text-right space-x-2">
-                        <button
-                          className="p-1 rounded hover:bg-indigo-50 text-indigo-600"
-                          title="Edit"
-                          onClick={() => openEditModal(user)}
-                        >
-                          <FaEdit />
-                        </button>
-                        <button
-                          className="p-1 rounded hover:bg-red-50 text-red-600"
-                          title="Delete"
-                          onClick={() =>
-                            handleDeleteUser(user._id, user.fullName)
-                          }
-                        >
-                          <FaTrash />
-                        </button>
+                      <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
+                        <div className="flex items-center justify-end space-x-2">
+                          <button
+                            className="p-2 rounded-lg hover:bg-blue-50 text-blue-600 transition-colors group-hover:bg-blue-50"
+                            title="Edit User"
+                            onClick={() => openEditModal(user)}
+                          >
+                            <FaEdit className="w-4 h-4" />
+                          </button>
+                          <button
+                            className="p-2 rounded-lg hover:bg-red-50 text-red-600 transition-colors group-hover:bg-red-50"
+                            title="Delete User"
+                            onClick={() =>
+                              handleDeleteUser(user._id, user.fullName)
+                            }
+                          >
+                            <FaTrash className="w-4 h-4" />
+                          </button>
+                        </div>
                       </td>
                     </tr>
                   ))
@@ -725,10 +754,11 @@ const Dashboard: React.FC = () => {
             </table>
             {tooltip.visible && (
               <div
-                className="fixed z-50 bg-white p-3 rounded-lg shadow-lg min-w-[220px] pointer-events-none"
+                className="fixed z-50 pointer-events-none"
                 style={{
                   left: tooltip.x,
                   top: tooltip.y,
+                  transform: 'translateX(-50%) translateY(-100%)',
                   opacity: tooltip.visible ? 1 : 0,
                   transition: "opacity 0.2s",
                 }}
@@ -737,43 +767,22 @@ const Dashboard: React.FC = () => {
               </div>
             )}
           </div>
-          {/* Pagination */}
-          <div className="bg-white px-4 py-3 flex items-center justify-between border-t border-gray-200 sm:px-6">
-            <div className="hidden sm:flex-1 sm:flex sm:items-center sm:justify-between">
-              <div>
-                <p className="text-sm text-gray-700">
-                  Showing{" "}
-                  <span className="font-medium">
-                    {(pagination.currentPage - 1) * 10 + 1}
-                  </span>{" "}
-                  to{" "}
-                  <span className="font-medium">
-                    {Math.min(
-                      pagination.currentPage * 10,
-                      pagination.totalUsers
-                    )}
-                  </span>{" "}
-                  of{" "}
-                  <span className="font-medium">{pagination.totalUsers}</span>{" "}
-                  results
-                </p>
-              </div>
-              <div>{renderPagination()}</div>
-            </div>
-          </div>
         </div>
       </div>
 
       {/* Add User Modal */}
       <Modal isOpen={showAddModal} onClose={closeModals}>
-        <div className="bg-white rounded-lg shadow-lg max-w-lg w-full p-6 mx-auto">
-          <h3 className="text-lg font-medium text-gray-900 mb-4">
-            Add New User
-          </h3>
-          <form onSubmit={handleAddUser} className="space-y-4">
-            <div className="flex gap-2">
+        <div className="bg-white rounded-2xl shadow-2xl max-w-lg w-full mx-4 transform transition-all mx-auto">
+          <div className="px-6 py-4 border-b border-gray-200 bg-gradient-to-r from-blue-50 to-indigo-50 rounded-t-2xl">
+            <h3 className="text-xl font-semibold text-gray-900">
+              Add New User
+            </h3>
+            <p className="text-sm text-gray-600 mt-1">Create a new user account</p>
+          </div>
+          <form onSubmit={handleAddUser} className="p-6 space-y-6">
+            <div className="grid grid-cols-2 gap-4">
               <div>
-                <label className="block text-sm font-medium text-gray-700">
+                <label className="block text-sm font-semibold text-gray-700 mb-2">
                   First Name
                 </label>
                 <input
@@ -781,12 +790,12 @@ const Dashboard: React.FC = () => {
                   name="firstName"
                   value={form.firstName}
                   onChange={handleFormChange}
-                  className="mt-1 block w-full border-gray-300 border rounded-md focus:outline-none focus:ring-4 focus:ring-indigo-700 p-2"
+                  className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
                   required
                 />
               </div>
               <div>
-                <label className="block text-sm font-medium text-gray-700">
+                <label className="block text-sm font-semibold text-gray-700 mb-2">
                   Last Name
                 </label>
                 <input
@@ -794,33 +803,33 @@ const Dashboard: React.FC = () => {
                   name="lastName"
                   value={form.lastName}
                   onChange={handleFormChange}
-                  className="mt-1 block w-full border-gray-300 border rounded-md focus:outline-none focus:ring-4 focus:ring-indigo-700 p-2"
+                  className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
                   required
                 />
               </div>
             </div>
             <div>
-              <label className="block text-sm font-medium text-gray-700">
-                Email
+              <label className="block text-sm font-semibold text-gray-700 mb-2">
+                Email Address
               </label>
               <input
                 type="email"
                 name="email"
                 value={form.email}
                 onChange={handleFormChange}
-                className="mt-1 block w-full border-gray-300 border rounded-md focus:outline-none focus:ring-4 focus:ring-indigo-700 p-2"
+                className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
                 required
               />
             </div>
             <div>
-              <label className="block text-sm font-medium text-gray-700">
+              <label className="block text-sm font-semibold text-gray-700 mb-2">
                 Role
               </label>
               <select
                 name="role"
                 value={form.role}
                 onChange={handleFormChange}
-                className="mt-1 block w-full border-gray-300 border rounded-md focus:outline-none focus:ring-4 focus:ring-indigo-700 p-2"
+                className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
                 required
               >
                 <option value="user">User</option>
@@ -828,7 +837,7 @@ const Dashboard: React.FC = () => {
               </select>
             </div>
             <div>
-              <label className="block text-sm font-medium text-gray-700">
+              <label className="block text-sm font-semibold text-gray-700 mb-2">
                 Password
               </label>
               <input
@@ -836,12 +845,12 @@ const Dashboard: React.FC = () => {
                 name="password"
                 value={form.password}
                 onChange={handleFormChange}
-                className="mt-1 block w-full border-gray-300 border rounded-md focus:outline-none focus:ring-4 focus:ring-indigo-700 p-2"
+                className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
                 required
               />
             </div>
             <div>
-              <label className="block text-sm font-medium text-gray-700">
+              <label className="block text-sm font-semibold text-gray-700 mb-2">
                 Confirm Password
               </label>
               <input
@@ -849,23 +858,23 @@ const Dashboard: React.FC = () => {
                 name="confirmPassword"
                 value={form.confirmPassword}
                 onChange={handleFormChange}
-                className="mt-1 block w-full border-gray-300 border rounded-md focus:outline-none focus:ring-4 focus:ring-indigo-700 p-2"
+                className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
                 required
               />
             </div>
-            <div className="flex justify-end space-x-2 mt-4">
-              <button
-                type="submit"
-                className="px-4 py-2 bg-indigo-600 text-white rounded-md"
-              >
-                Save
-              </button>
+            <div className="flex justify-end space-x-3 pt-4">
               <button
                 type="button"
                 onClick={closeModals}
-                className="px-4 py-2 bg-gray-200 text-gray-700 rounded-md"
+                className="px-6 py-3 text-gray-700 font-semibold rounded-xl hover:bg-gray-100 transition-colors"
               >
                 Cancel
+              </button>
+              <button
+                type="submit"
+                className="px-6 py-3 bg-gradient-to-r from-blue-600 to-blue-700 text-white font-semibold rounded-xl hover:from-blue-700 hover:to-blue-800 transition-all shadow-lg"
+              >
+                Create User
               </button>
             </div>
           </form>
@@ -874,12 +883,15 @@ const Dashboard: React.FC = () => {
 
       {/* Edit User Modal */}
       <Modal isOpen={showEditModal} onClose={closeModals}>
-        <div className="bg-white rounded-lg shadow-lg max-w-lg w-full p-6 mx-auto">
-          <h3 className="text-lg font-medium text-gray-900 mb-4">Edit User</h3>
-          <form onSubmit={handleEditUser} className="space-y-4">
-            <div className="flex gap-2">
+        <div className="bg-white rounded-2xl shadow-2xl max-w-lg w-full mx-4 transform transition-all mx-auto">
+          <div className="px-6 py-4 border-b border-gray-200 bg-gradient-to-r from-green-50 to-emerald-50 rounded-t-2xl">
+            <h3 className="text-xl font-semibold text-gray-900">Edit User</h3>
+            <p className="text-sm text-gray-600 mt-1">Update user information</p>
+          </div>
+          <form onSubmit={handleEditUser} className="p-6 space-y-6">
+            <div className="grid grid-cols-2 gap-4">
               <div>
-                <label className="block text-sm font-medium text-gray-700">
+                <label className="block text-sm font-semibold text-gray-700 mb-2">
                   First Name
                 </label>
                 <input
@@ -887,12 +899,12 @@ const Dashboard: React.FC = () => {
                   name="firstName"
                   value={form.firstName}
                   onChange={handleFormChange}
-                  className="mt-1 block w-full border-gray-300 border rounded-md focus:outline-none focus:ring-4 focus:ring-indigo-700 p-2"
+                  className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent transition-all"
                   required
                 />
               </div>
               <div>
-                <label className="block text-sm font-medium text-gray-700">
+                <label className="block text-sm font-semibold text-gray-700 mb-2">
                   Last Name
                 </label>
                 <input
@@ -900,37 +912,37 @@ const Dashboard: React.FC = () => {
                   name="lastName"
                   value={form.lastName}
                   onChange={handleFormChange}
-                  className="mt-1 block w-full border-gray-300 border rounded-md focus:outline-none focus:ring-4 focus:ring-indigo-700 p-2"
+                  className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent transition-all"
                   required
                 />
               </div>
             </div>
             <div>
-              <label className="block text-sm font-medium text-gray-700">
-                Email
+              <label className="block text-sm font-semibold text-gray-700 mb-2">
+                Email Address
               </label>
               <input
                 type="email"
                 name="email"
                 value={form.email}
                 onChange={handleFormChange}
-                className="mt-1 block w-full border-gray-300 border rounded-md focus:outline-none focus:ring-4 focus:ring-indigo-700 p-2"
+                className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent transition-all"
                 required
               />
             </div>
-            <div className="flex justify-end space-x-2 mt-4">
-              <button
-                type="submit"
-                className="px-4 py-2 bg-indigo-600 text-white rounded-md"
-              >
-                Save
-              </button>
+            <div className="flex justify-end space-x-3 pt-4">
               <button
                 type="button"
                 onClick={closeModals}
-                className="px-4 py-2 bg-gray-200 text-gray-700 rounded-md"
+                className="px-6 py-3 text-gray-700 font-semibold rounded-xl hover:bg-gray-100 transition-colors"
               >
                 Cancel
+              </button>
+              <button
+                type="submit"
+                className="px-6 py-3 bg-gradient-to-r from-green-600 to-green-700 text-white font-semibold rounded-xl hover:from-green-700 hover:to-green-800 transition-all shadow-lg"
+              >
+                Update User
               </button>
             </div>
           </form>
@@ -940,14 +952,14 @@ const Dashboard: React.FC = () => {
       {/* User Status Modal */}
       <Modal isOpen={showStatusModal} onClose={closeStatusModal}>
         {statusUser && (
-          <div className="relative bg-white rounded-xl shadow-xl max-w-md w-full mx-4 transform transition-all duration-300 mx-auto">
-            <div className="flex items-center justify-between p-4 border-b border-gray-200">
+          <div className="relative bg-white rounded-2xl shadow-2xl max-w-md w-full mx-4 transform transition-all mx-auto">
+            <div className="flex items-center justify-between p-6 border-b border-gray-200 bg-gradient-to-r from-purple-50 to-pink-50 rounded-t-2xl">
               <h3 className="text-xl font-semibold text-gray-800">
-                Manage User Account
+                Manage Account Status
               </h3>
               <button
                 onClick={closeStatusModal}
-                className="text-gray-400 hover:text-gray-600 transition-colors"
+                className="text-gray-400 hover:text-gray-600 transition-colors p-2 rounded-lg hover:bg-gray-100"
               >
                 <FaTimesCircle className="text-xl" />
               </button>
@@ -958,87 +970,82 @@ const Dashboard: React.FC = () => {
                   <img
                     src={`https://ui-avatars.com/api/?name=${encodeURIComponent(
                       statusUser.fullName
-                    )}`}
+                    )}&background=6366f1&color=fff&size=64`}
                     alt="User avatar"
-                    className="w-16 h-16 rounded-full border-4 border-gray-200 object-cover shadow-sm"
+                    className="w-16 h-16 rounded-full border-4 border-gray-200 object-cover shadow-lg"
                   />
                   <span
-                    className={`absolute bottom-0 right-0 w-5 h-5 rounded-full border-2 border-white ${
-                      pendingStatus === true ? "bg-green-500" : "bg-red-400"
-                    }`}
+                    className={`absolute bottom-0 right-0 w-5 h-5 rounded-full border-2 border-white shadow-sm ${pendingStatus === true ? "bg-green-500" : "bg-red-500"
+                      }`}
                   ></span>
                 </div>
                 <div>
-                  <h4 className="font-medium text-gray-900">
+                  <h4 className="font-semibold text-gray-900 text-lg">
                     {statusUser.fullName}
                   </h4>
                   <p className="text-gray-600 text-sm">{statusUser.email}</p>
                   <div
-                    className={`inline-block px-3 py-1 rounded-full text-xs mt-1 font-medium ${
-                      pendingStatus === true
-                        ? "bg-green-100 text-green-800"
-                        : "bg-red-200 text-red-600"
-                    }`}
+                    className={`inline-block px-3 py-1 rounded-full text-xs mt-2 font-semibold ${pendingStatus === true
+                      ? "bg-green-100 text-green-800"
+                      : "bg-red-100 text-red-800"
+                      }`}
                   >
                     {pendingStatus === true ? "Active" : "Inactive"}
                   </div>
                 </div>
               </div>
               <div className="mb-6">
-                <h5 className="text-sm font-medium text-gray-500 mb-3">
-                  SET ACCOUNT STATUS
+                <h5 className="text-sm font-semibold text-gray-700 mb-4 uppercase tracking-wide">
+                  Set Account Status
                 </h5>
-                <div className="flex space-x-3">
+                <div className="grid grid-cols-2 gap-3">
                   <button
                     onClick={() => handleStatusChange(true)}
-                    className={`flex-1 border-2 font-medium py-3 px-4 rounded-lg flex items-center justify-center transition-all duration-200 ${
-                      pendingStatus === true
-                        ? "border-green-400 bg-green-50 text-green-700"
-                        : "border-gray-300 bg-white text-gray-700 hover:bg-green-50"
-                    }`}
+                    className={`border-2 font-semibold py-4 px-4 rounded-xl flex items-center justify-center transition-all duration-200 ${pendingStatus === true
+                      ? "border-green-400 bg-green-50 text-green-700 shadow-md"
+                      : "border-gray-300 bg-white text-gray-700 hover:bg-green-50 hover:border-green-300"
+                      }`}
                   >
-                    <FaCheckCircle className="mr-2" />
+                    <FaUserCheck className="mr-2 w-4 h-4" />
                     Activate
                   </button>
                   <button
                     onClick={() => handleStatusChange(false)}
-                    className={`flex-1 border-2 font-medium py-3 px-4 rounded-lg flex items-center justify-center transition-all duration-200 ${
-                      pendingStatus === false
-                        ? "border-red-400 bg-red-100 text-red-700"
-                        : "border-gray-300 bg-white text-gray-700 hover:bg-gray-100"
-                    }`}
+                    className={`border-2 font-semibold py-4 px-4 rounded-xl flex items-center justify-center transition-all duration-200 ${pendingStatus === false
+                      ? "border-red-400 bg-red-50 text-red-700 shadow-md"
+                      : "border-gray-300 bg-white text-gray-700 hover:bg-red-50 hover:border-red-300"
+                      }`}
                   >
-                    <FaTimesCircle className="mr-2" />
+                    <FaUserTimes className="mr-2 w-4 h-4" />
                     Deactivate
                   </button>
                 </div>
               </div>
-              <div className="bg-yellow-50 border-l-4 border-yellow-400 p-4 rounded mb-6">
+              <div className="bg-amber-50 border-l-4 border-amber-400 p-4 rounded-xl mb-6">
                 <div className="flex">
                   <div className="flex-shrink-0">
-                    <FaExclamationCircle className="text-yellow-400" />
+                    <FaExclamationCircle className="text-amber-400 w-5 h-5" />
                   </div>
                   <div className="ml-3">
-                    <p className="text-sm text-yellow-700">
-                      Deactivating an account will restrict user access
-                      immediately. The user won't be able to log in until
-                      reactivated.
+                    <p className="text-sm text-amber-700 font-medium">
+                      Deactivating an account will immediately restrict user access.
+                      The user won't be able to log in until reactivated.
                     </p>
                   </div>
                 </div>
               </div>
             </div>
-            <div className="flex justify-end p-4 border-t border-gray-200 bg-gray-50 rounded-b-xl">
+            <div className="flex justify-end p-6 border-t border-gray-200 bg-gray-50 rounded-b-2xl">
               <button
                 onClick={closeStatusModal}
-                className="px-4 py-2 text-gray-700 font-medium rounded-lg hover:bg-gray-100 mr-3 transition-colors"
+                className="px-6 py-3 text-gray-700 font-semibold rounded-xl hover:bg-gray-100 mr-3 transition-colors"
                 disabled={statusLoading}
               >
                 Cancel
               </button>
               <button
                 onClick={confirmStatusUpdate}
-                className="px-4 py-2 bg-blue-600 text-white font-medium rounded-lg hover:bg-blue-700 transition-colors shadow-sm"
+                className="px-6 py-3 bg-gradient-to-r from-purple-600 to-purple-700 text-white font-semibold rounded-xl hover:from-purple-700 hover:to-purple-800 transition-all shadow-lg"
                 disabled={
                   statusLoading ||
                   pendingStatus === (statusUser.isActive ? true : false)
