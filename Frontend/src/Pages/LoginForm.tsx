@@ -1,5 +1,6 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 import React, { useState, type FormEvent } from "react";
-import { FaClock, FaSignInAlt } from "react-icons/fa";
+import { FaClock, FaSignInAlt, FaEye, FaEyeSlash } from "react-icons/fa";
 
 import { useAuth } from "../Auth/AuthContext";
 import { Toast } from "../Components/Toast";
@@ -8,9 +9,12 @@ const LoginForm: React.FC = () => {
   const { login } = useAuth();
   const [loginEmail, setLoginEmail] = useState<string>("");
   const [loginPassword, setLoginPassword] = useState<string>("");
+  const [showPassword, setShowPassword] = useState<boolean>(false);
+  const [isLoading, setIsLoading] = useState<boolean>(false);
 
   const handleLoginSubmit = async (e: FormEvent) => {
     e.preventDefault();
+    setIsLoading(true);
 
     try {
       if (!loginEmail || !loginPassword) {
@@ -42,67 +46,99 @@ const LoginForm: React.FC = () => {
           title: "Login failed. Check credentials.",
         });
       }
+    } finally {
+      setIsLoading(false);
     }
   };
 
   return (
-    <div className="font-sans antialiased">
-      {/* Main Content */}
-      <div className="flex items-center justify-center py-12 px-4 sm:px-6 lg:px-8">
-        <div className="max-w-md w-full space-y-8 bg-white p-10 rounded-xl shadow-lg">
-          <div className="text-center border-b pb-8">
-            <FaClock className="text-indigo-600 text-5xl mb-4 mx-auto" />
-            <h2 className="mt-6 text-3xl font-extrabold text-gray-900">
-              Sign in to your account
-            </h2>
+    <div className="flex items-center justify-center lg:p-16 p-4">
+      <div className="w-full max-w-md">
+        <div className="bg-white/80 backdrop-blur-sm rounded-2xl shadow-2xl border border-white/20 overflow-hidden">
+          <div className="bg-gradient-to-r from-indigo-600 to-purple-600 px-8 py-8 text-center">
+            <div className="inline-flex items-center justify-center w-16 h-16 bg-white/20 rounded-full mb-6">
+              <FaClock className="text-white text-2xl" />
+            </div>
+            <h1 className="text-3xl font-bold text-white mb-2">Welcome Back</h1>
+            <p className="text-indigo-100 text-sm">Sign in to your account to continue</p>
           </div>
-          <form className="mt-8 space-y-6" onSubmit={handleLoginSubmit}>
-            <div className="rounded-md shadow-sm space-y-4">
-              <div>
-                <label htmlFor="login-email" className="sr-only">
-                  Email address
+
+          <div className="px-8 py-8">
+            <form onSubmit={handleLoginSubmit} className="space-y-6">
+              <div className="space-y-2">
+                <label htmlFor="login-email" className="block text-sm font-medium text-gray-700">
+                  Email Address
                 </label>
-                <input
-                  id="login-email"
-                  name="email"
-                  type="email"
-                  autoComplete="email"
-                  required
-                  className="appearance-none relative block w-full px-3 py-3 border border-gray-300 placeholder-gray-500 text-gray-900 rounded-md focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 focus:z-10 sm:text-sm"
-                  placeholder="Email address"
-                  value={loginEmail}
-                  onChange={(e) => setLoginEmail(e.target.value)}
-                />
+                <div className="relative">
+                  <input
+                    id="login-email"
+                    name="email"
+                    type="email"
+                    autoComplete="email"
+                    required
+                    className="w-full px-4 py-3 border border-gray-200 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition-all duration-200 bg-gray-50/50 hover:bg-gray-50"
+                    placeholder="Enter your email"
+                    value={loginEmail}
+                    onChange={(e) => setLoginEmail(e.target.value)}
+                  />
+                </div>
               </div>
-              <div>
-                <label htmlFor="login-password" className="sr-only">
+
+              <div className="space-y-2">
+                <label htmlFor="login-password" className="block text-sm font-medium text-gray-700">
                   Password
                 </label>
-                <input
-                  id="login-password"
-                  name="password"
-                  type="password"
-                  autoComplete="current-password"
-                  required
-                  className="appearance-none relative block w-full px-3 py-3 border border-gray-300 placeholder-gray-500 text-gray-900 rounded-md focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 focus:z-10 sm:text-sm"
-                  placeholder="Password"
-                  value={loginPassword}
-                  onChange={(e) => setLoginPassword(e.target.value)}
-                />
+                <div className="relative">
+                  <input
+                    id="login-password"
+                    name="password"
+                    type={showPassword ? "text" : "password"}
+                    autoComplete="current-password"
+                    required
+                    className="w-full px-4 py-3 pr-12 border border-gray-200 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition-all duration-200 bg-gray-50/50 hover:bg-gray-50"
+                    placeholder="Enter your password"
+                    value={loginPassword}
+                    onChange={(e) => setLoginPassword(e.target.value)}
+                  />
+                  <button
+                    type="button"
+                    className="absolute inset-y-0 right-0 pr-3 flex items-center"
+                    onClick={() => setShowPassword(!showPassword)}
+                  >
+                    {showPassword ? (
+                      <FaEye className="h-5 w-5 text-gray-400 hover:text-gray-600 transition-colors" />
+                    ) : (
+                      <FaEyeSlash className="h-5 w-5 text-gray-400 hover:text-gray-600 transition-colors" />
+                    )}
+                  </button>
+                </div>
               </div>
-            </div>
-            <div>
+
               <button
                 type="submit"
-                className="group relative w-full flex justify-center py-3 px-4 border border-transparent text-sm font-medium rounded-md text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500"
+                disabled={isLoading}
+                className="w-full bg-gradient-to-r from-indigo-600 to-purple-600 text-white py-3 px-4 rounded-lg font-medium hover:from-indigo-700 hover:to-purple-700 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2 transition-all duration-200 transform hover:scale-[1.02] disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none"
               >
-                <span className="absolute left-0 inset-y-0 flex items-center pl-3">
-                  <FaSignInAlt className="text-indigo-300 group-hover:text-indigo-200" />
-                </span>
-                Sign in
+                {isLoading ? (
+                  <div className="flex items-center justify-center">
+                    <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white mr-2"></div>
+                    Signing in...
+                  </div>
+                ) : (
+                  <div className="flex items-center justify-center">
+                    <FaSignInAlt className="mr-2" />
+                    Sign In
+                  </div>
+                )}
               </button>
+            </form>
+
+            <div className="mt-8 pt-6 border-t border-gray-100 text-center">
+              <p className="text-xs text-gray-500">
+                Secure login powered by <span className="font-bold bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">Sparkle Time Tracker</span>
+              </p>
             </div>
-          </form>
+          </div>
         </div>
       </div>
     </div>
