@@ -646,6 +646,16 @@ const HomePage: React.FC = () => {
     }
   };
 
+  function getProgressGradient(percent: number) {
+    if (percent < 33.34) {
+      return "linear-gradient(to right, #ef4444, #f87171)";
+    } else if (percent < 66.68) {
+      return "linear-gradient(to right, #fbbf24, #f59e42)";
+    } else {
+      return "linear-gradient(to right, #22c55e, #14b8a6)";
+    }
+  }
+
   return (
     <div className="font-sans antialiased min-h-screen">
       {/* Main Content */}
@@ -654,7 +664,7 @@ const HomePage: React.FC = () => {
           <div className="mb-8">
             <div className="flex flex-col md:flex-row gap-4 items-start md:items-center justify-between">
               <div className="w-full md:w-auto flex items-center gap-4">
-              <div className="relative flex-shrink-0">
+                <div className="relative flex-shrink-0">
                   <img
                     className="h-16 w-16 md:h-16 md:w-16 h-12 w-12 sm:h-14 sm:w-14 rounded-full object-cover border-4 border-white shadow-lg transition-all duration-200 md:h-16 md:w-16"
                     src={`https://ui-avatars.com/api/?name=${user?.fullName}`}
@@ -678,7 +688,7 @@ const HomePage: React.FC = () => {
                 </div>
               </div>
 
-              <div className="w-full md:w-auto mt-4 md:mt-0">
+              <div className="w-full md:w-auto mt-4 md:mt-0 border border-indigo-200 rounded-lg">
                 <div className="bg-white overflow-hidden shadow rounded-lg">
                   <div className="px-4 py-5 sm:p-6">
                     <div className="flex items-center gap-2">
@@ -781,7 +791,7 @@ const HomePage: React.FC = () => {
                     <span>{progressPercent}%</span>
                   </div>
                   <div className="w-full bg-gray-200 rounded-full h-1.5">
-                    <div className="bg-gradient-to-r from-green-400 to-teal-500 h-1.5 rounded-full" style={{ width: `${progressPercent}%` }}></div>
+                    <div className="bg-gradient-to-r from-green-400 to-teal-500 h-1.5 rounded-full" style={{ width: `${progressPercent}%`, background: getProgressGradient(progressPercent), }}></div>
                   </div>
                 </div>
               </div>
@@ -964,8 +974,8 @@ const HomePage: React.FC = () => {
           </div>
 
           {/* Today's Timeline */}
-          <div className="bg-white shadow rounded-xl overflow-hidden">
-            <div className="px-6 py-5 border-b border-gray-100 bg-gradient-to-r from-blue-50 to-indigo-50">
+          <div className="bg-white shadow rounded-xl overflow-hidden border border-gray-200">
+            <div className="px-6 py-5 bg-gradient-to-r from-blue-50 to-indigo-50 border-b border-indigo-200">
               <div className="flex items-center justify-between">
                 <div>
                   <h3 className="text-xl font-semibold text-gray-800">
@@ -998,7 +1008,7 @@ const HomePage: React.FC = () => {
                   ) : (
                     userTimes.map((event, idx) => (
                       <li className="relative" key={idx}>
-                        <div className="bg-gray-50 p-4 rounded-xl">
+                        <div className="bg-gray-100 p-4 rounded-xl">
                           <div className="grid grid-cols-3 gap-4">
                             <div className="flex items-center space-x-2">
                               <FaSignInAlt className="text-green-500" />

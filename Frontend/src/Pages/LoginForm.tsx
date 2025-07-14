@@ -1,6 +1,6 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import React, { useState, type FormEvent } from "react";
-import { FaClock, FaSignInAlt, FaEye, FaEyeSlash } from "react-icons/fa";
+import { FaClock, FaSignInAlt, FaEye, FaEyeSlash, FaEnvelope, FaLock } from "react-icons/fa";
 
 import { useAuth } from "../Auth/AuthContext";
 import { Toast } from "../Components/Toast";
@@ -70,13 +70,14 @@ const LoginForm: React.FC = () => {
                   Email Address
                 </label>
                 <div className="relative">
+                  <FaEnvelope className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" />
                   <input
                     id="login-email"
                     name="email"
                     type="email"
                     autoComplete="email"
                     required
-                    className="w-full px-4 py-3 border border-gray-200 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition-all duration-200 bg-gray-50/50 hover:bg-gray-50"
+                    className="w-full px-12 py-3 border border-gray-200 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition-all duration-200 bg-gray-50/50 hover:bg-gray-50"
                     placeholder="Enter your email"
                     value={loginEmail}
                     onChange={(e) => setLoginEmail(e.target.value)}
@@ -89,13 +90,15 @@ const LoginForm: React.FC = () => {
                   Password
                 </label>
                 <div className="relative">
+
+                  <FaLock className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" />
                   <input
                     id="login-password"
                     name="password"
                     type={showPassword ? "text" : "password"}
                     autoComplete="current-password"
                     required
-                    className="w-full px-4 py-3 pr-12 border border-gray-200 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition-all duration-200 bg-gray-50/50 hover:bg-gray-50"
+                    className="w-full px-10 py-3 pr-12 border border-gray-200 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition-all duration-200 bg-gray-50/50 hover:bg-gray-50"
                     placeholder="Enter your password"
                     value={loginPassword}
                     onChange={(e) => setLoginPassword(e.target.value)}
