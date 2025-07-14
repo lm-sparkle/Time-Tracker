@@ -1,7 +1,7 @@
 @import "tailwindcss";
 
 body {
-  background-image: linear-gradient(to bottom right, #f8fafc, #eff6ff);
+  background: linear-gradient(to bottom right, #eff6ff, #eef2ff, #f5f3ff);
 }
 
 @keyframes ring-flash-status {

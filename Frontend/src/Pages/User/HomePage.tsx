@@ -647,7 +647,7 @@ const HomePage: React.FC = () => {
   };
 
   return (
-    <div className="font-sans antialiased bg-gray-50 min-h-screen">
+    <div className="font-sans antialiased min-h-screen">
       {/* Main Content */}
       <div className="py-10">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
