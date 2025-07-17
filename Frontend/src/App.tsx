@@ -18,6 +18,24 @@ const App = () => {
     }
   }, []);
 
+
+  useEffect(() => {
+    // Request notification permission on load
+    if ("Notification" in window && Notification.permission !== "granted") {
+      Notification.requestPermission();
+    }
+
+
+    // TEST: Schedule a notification every 1 minute for 3 times
+    for (let i = 1; i <= 3; i++) {
+      setTimeout(() => {
+        if (Notification.permission === "granted") {
+          new Notification(`Test notification ${i} of 3`);
+        }
+      }, i * 60 * 1000); // 1, 2, 3 minutes
+    }
+  }, []);
+
   return (
     <div>
       <Navbar />
