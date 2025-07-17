@@ -20,20 +20,28 @@ const App = () => {
 
 
   useEffect(() => {
-    // Request notification permission on load
     if ("Notification" in window && Notification.permission !== "granted") {
       Notification.requestPermission();
     }
 
-
-    // TEST: Schedule a notification every 1 minute for 3 times
-    for (let i = 1; i <= 3; i++) {
+    function scheduleNotification(hour: number, minute: number, message: string) {
+      const now = new Date();
+      const target = new Date();
+      target.setHours(hour, minute, 0, 0);
+      if (now > target) {
+        target.setDate(target.getDate() + 1);
+      }
+      const timeout = target.getTime() - now.getTime();
       setTimeout(() => {
         if (Notification.permission === "granted") {
-          new Notification(`Test notification ${i} of 3`);
+          new Notification(message);
         }
-      }, i * 60 * 1000); // 1, 2, 3 minutes
+      }, timeout);
     }
+
+    scheduleNotification(13, 0, "It's 1:00 PM! Time for your lunch break.");
+    scheduleNotification(14, 0, "It's 2:00 PM! Please resume your work.");
+
   }, []);
 
   return (
