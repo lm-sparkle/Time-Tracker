@@ -10,7 +10,7 @@ export default defineConfig({
     rollupOptions: {
       input: {
         main: resolve(__dirname, "index.html"),
-        "service-worker": resolve(__dirname, "/service-worker.ts"),
+        "service-worker": resolve(__dirname, "src/service-worker.ts"),
       },
       output: {
         entryFileNames: (chunkInfo) => {
