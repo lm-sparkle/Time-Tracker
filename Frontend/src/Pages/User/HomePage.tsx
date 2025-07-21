@@ -92,6 +92,8 @@ const HomePage: React.FC = () => {
   const [isClockInLoading, setIsClockInLoading] = useState(false);
   const [isClockOutLoading, setIsClockOutLoading] = useState(false);
 
+  const [isReady, setIsReady] = useState(false);
+
   const [loggedTimeAnim, setLoggedTimeAnim] = useState(false);
   const [breakTimeAnim, setBreakTimeAnim] = useState(false);
   const [trackerStatusAnim, setTrackerStatusAnim] = useState(false);
@@ -436,6 +438,7 @@ const HomePage: React.FC = () => {
         }
       );
       setUserLatestTime(response.data);
+      setIsReady(true);
       sessionStorage.setItem("time_Id", response.data?.[0]?._id);
       setStatus(response.data?.[0]?.status || "not_clocked_in");
     } catch (error: any) {
@@ -840,7 +843,7 @@ const HomePage: React.FC = () => {
             {/* In Time */}
             <button
               onClick={handleClockIn}
-              disabled={
+              disabled={!isReady ||
                 isClockInLoading ||
                 !(
                   status === "not_clocked_in" ||
@@ -893,7 +896,7 @@ const HomePage: React.FC = () => {
             {/* Out Time */}
             <button
               onClick={handleClockOut}
-              disabled={status !== "clocked_in" || isClockOutLoading}
+              disabled={!isReady || status !== "clocked_in" || isClockOutLoading}
               className={`time-card bg-gradient-to-br from-amber-50 to-amber-100 border border-amber-200 overflow-hidden shadow rounded-lg text-left ${status === "clocked_in" && !isClockOutLoading
                 ? "cursor-pointer hover:shadow-lg transition-shadow"
                 : "opacity-50 cursor-not-allowed"
@@ -936,7 +939,7 @@ const HomePage: React.FC = () => {
             {/* Final Out Time */}
             <button
               onClick={handleFinalClockOut}
-              disabled={
+              disabled={!isReady ||
                 !(status === "clocked_in" || status === "clocked_out_for_break")
               }
               className={`time-card bg-gradient-to-br from-red-50 to-red-100 border border-red-200 overflow-hidden shadow rounded-lg text-left ${status === "clocked_in" || status === "clocked_out_for_break"
