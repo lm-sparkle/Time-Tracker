@@ -92,7 +92,7 @@ const HomePage: React.FC = () => {
   const [isClockInLoading, setIsClockInLoading] = useState(false);
   const [isClockOutLoading, setIsClockOutLoading] = useState(false);
 
-  const [isReady, setIsReady] = useState(false);
+  const [buttonsDisabled, setButtonsDisabled] = useState(true);
 
   const [loggedTimeAnim, setLoggedTimeAnim] = useState(false);
   const [breakTimeAnim, setBreakTimeAnim] = useState(false);
@@ -426,6 +426,7 @@ const HomePage: React.FC = () => {
   };
 
   const fetchUserLatestTime = async () => {
+    setButtonsDisabled(true); // Set buttons disabled while fetching
     try {
       const today = new Date().toISOString().split("T")[0];
       const response = await api.get(
@@ -438,10 +439,17 @@ const HomePage: React.FC = () => {
         }
       );
       setUserLatestTime(response.data);
-      setIsReady(true);
       sessionStorage.setItem("time_Id", response.data?.[0]?._id);
       setStatus(response.data?.[0]?.status || "not_clocked_in");
+      if (Array.isArray(response.data) && response.data.length > 0) {
+        setButtonsDisabled(false); // Enable buttons if data is available
+      } else if (response.data && typeof response.data === 'object') {
+        setButtonsDisabled(false); // Enable buttons if data is available
+      } else {
+        setButtonsDisabled(true); // Disable buttons if no data
+      }
     } catch (error: any) {
+      setButtonsDisabled(true);
       const message = error.response?.data || error.message;
       if (
         error.response?.status === 403 &&
@@ -843,22 +851,21 @@ const HomePage: React.FC = () => {
             {/* In Time */}
             <button
               onClick={handleClockIn}
-              disabled={!isReady ||
+              disabled={buttonsDisabled ||
                 isClockInLoading ||
                 !(
                   status === "not_clocked_in" ||
                   status === "clocked_out_for_break"
                 )
               }
-              className={`time-card bg-gradient-to-br from-green-50 to-green-100 border border-green-200 overflow-hidden shadow rounded-lg text-left ${(status === "not_clocked_in" ||
-                status === "clocked_out_for_break") &&
-                !isClockInLoading
-                ? "cursor-pointer hover:shadow-lg transition-shadow"
-                : "opacity-50 cursor-not-allowed"
+              className={`time-card bg-gradient-to-br from-green-50 to-green-100 border border-green-200 overflow-hidden shadow rounded-lg text-left ${buttonsDisabled || isClockInLoading ||
+                !(status === "not_clocked_in" || status === "clocked_out_for_break")
+                ? "opacity-50 cursor-not-allowed"
+                : "cursor-pointer hover:shadow-lg transition-shadow"
                 }`}
             >
               <div className="px-4 py-5 sm:p-6 text-center h-full">
-                {isClockInLoading ? (
+                {buttonsDisabled || isClockInLoading ? (
                   <FaSpinner className="animate-spin text-2xl text-green-600 mx-auto" />
                 ) : (
                   <>
@@ -896,14 +903,14 @@ const HomePage: React.FC = () => {
             {/* Out Time */}
             <button
               onClick={handleClockOut}
-              disabled={!isReady || status !== "clocked_in" || isClockOutLoading}
-              className={`time-card bg-gradient-to-br from-amber-50 to-amber-100 border border-amber-200 overflow-hidden shadow rounded-lg text-left ${status === "clocked_in" && !isClockOutLoading
-                ? "cursor-pointer hover:shadow-lg transition-shadow"
-                : "opacity-50 cursor-not-allowed"
+              disabled={buttonsDisabled || status !== "clocked_in" || isClockOutLoading}
+              className={`time-card bg-gradient-to-br from-amber-50 to-amber-100 border border-amber-200 overflow-hidden shadow rounded-lg text-left ${buttonsDisabled || isClockOutLoading || status !== "clocked_in"
+                ? "opacity-50 cursor-not-allowed"
+                : "cursor-pointer hover:shadow-lg transition-shadow"
                 }`}
             >
               <div className="px-4 py-5 sm:p-6 text-center h-full">
-                {isClockOutLoading ? (
+                {buttonsDisabled || isClockOutLoading ? (
                   <FaSpinner className="animate-spin text-2xl text-amber-600 mx-auto" />
                 ) : (
                   <>
@@ -939,39 +946,43 @@ const HomePage: React.FC = () => {
             {/* Final Out Time */}
             <button
               onClick={handleFinalClockOut}
-              disabled={!isReady ||
+              disabled={buttonsDisabled ||
                 !(status === "clocked_in" || status === "clocked_out_for_break")
               }
-              className={`time-card bg-gradient-to-br from-red-50 to-red-100 border border-red-200 overflow-hidden shadow rounded-lg text-left ${status === "clocked_in" || status === "clocked_out_for_break"
-                ? "cursor-pointer hover:shadow-lg transition-shadow"
-                : "opacity-50 cursor-not-allowed"
+              className={`time-card bg-gradient-to-br from-red-50 to-red-100 border border-red-200 overflow-hidden shadow rounded-lg text-left ${buttonsDisabled || !(status === "clocked_in" || status === "clocked_out_for_break")
+                ? "opacity-50 cursor-not-allowed"
+                : "cursor-pointer hover:shadow-lg transition-shadow"
                 }`}
             >
               <div className="px-4 py-5 sm:p-6 text-center">
-                <div className="mx-auto flex-shrink-0 flex items-center justify-center h-12 w-12 rounded-full bg-red-200">
-                  <FaDoorOpen className="text-red-600 text-xl" />
-                </div>
-                <h3 className="mt-3 text-lg font-medium text-gray-900">
-                  Final Clock Out
-                </h3>
-                <p className="mt-1 text-sm text-gray-500">End your workday</p>
-                <div className="mt-4 text-2xl font-semibold text-gray-900">
-                  {userLatestTime[0]?.status === "clocked_out" ? (
-                    <>
-                      {userLatestTime[0]?.outTime
-                        ? new Date(
-                          userLatestTime[0]?.outTime
-                        ).toLocaleTimeString('en-US', {
-                          hour: "2-digit",
-                          minute: "2-digit",
-                          second: "2-digit",
-                        })
-                        : "--:--:--"}
-                    </>
-                  ) : (
-                    "--:--:--"
-                  )}
-                </div>
+                {buttonsDisabled ? (
+                  <FaSpinner className="animate-spin text-2xl text-red-600 mx-auto" />
+                ) : (<>
+                  <div className="mx-auto flex-shrink-0 flex items-center justify-center h-12 w-12 rounded-full bg-red-200">
+                    <FaDoorOpen className="text-red-600 text-xl" />
+                  </div>
+                  <h3 className="mt-3 text-lg font-medium text-gray-900">
+                    Final Clock Out
+                  </h3>
+                  <p className="mt-1 text-sm text-gray-500">End your workday</p>
+                  <div className="mt-4 text-2xl font-semibold text-gray-900">
+                    {userLatestTime[0]?.status === "clocked_out" ? (
+                      <>
+                        {userLatestTime[0]?.outTime
+                          ? new Date(
+                            userLatestTime[0]?.outTime
+                          ).toLocaleTimeString('en-US', {
+                            hour: "2-digit",
+                            minute: "2-digit",
+                            second: "2-digit",
+                          })
+                          : "--:--:--"}
+                      </>
+                    ) : (
+                      "--:--:--"
+                    )}
+                  </div>
+                </>)}
               </div>
             </button>
           </div>
