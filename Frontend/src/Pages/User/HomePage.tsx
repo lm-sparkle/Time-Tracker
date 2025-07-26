@@ -108,6 +108,10 @@ const HomePage: React.FC = () => {
   const [fetchedEntriesForAttendance, setFetchedEntriesForAttendance] =
     useState<any[]>([]);
 
+  const [showLunchModal, setShowLunchModal] = useState(false);
+  const [lunchReason, setLunchReason] = useState("");
+  const [isLunchSubmitting, setIsLunchSubmitting] = useState(false);
+
   if (user) {
     sessionStorage.setItem("userId", user.id);
   }
@@ -223,7 +227,25 @@ const HomePage: React.FC = () => {
     setSubject(response.data.subject);
   };
 
+  function isLunchTime() {
+    const now = new Date();
+    const start = new Date(now);
+    start.setHours(12, 0, 0, 0); // 1:00 pm
+    const end = new Date(now);
+    end.setHours(13, 0, 0, 0); // 2:00 pm
+    return now >= start && now < end;
+  }
+
   const handleClockIn = async () => {
+    const bypassId = import.meta.env.VITE_LUNCH_BYPASS_ID;
+    if (isLunchTime() && user?.id !== bypassId) {
+      setShowLunchModal(true);
+      return;
+    }
+    await doClockIn();
+  };
+
+  const doClockIn = async (reason?: string) => {
     setIsClockInLoading(true);
     try {
       if (status === "not_clocked_in" || status === "clocked_out_for_break") {
@@ -231,6 +253,7 @@ const HomePage: React.FC = () => {
           `${import.meta.env.VITE_API_URL}time/clock-in`,
           {
             userId: user?.id,
+            lunchReason: reason || undefined,
           },
           {
             headers: {
@@ -666,6 +689,35 @@ const HomePage: React.FC = () => {
       return "linear-gradient(to right, #22c55e, #14b8a6)";
     }
   }
+
+  const handleLunchSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setIsLunchSubmitting(true);
+    try {
+      // Send email with reason
+      await api.post(
+        `${import.meta.env.VITE_API_URL}status/lunch-warning`,
+        {
+          userName: user?.fullName,
+          userMail: user?.email,
+          reason: lunchReason,
+        },
+        {
+          headers: {
+            Authorization: `Bearer ${sessionStorage.getItem("token")}`,
+          },
+        }
+      );
+      // Proceed with clock in
+      await doClockIn(lunchReason);
+      setShowLunchModal(false);
+      setLunchReason("");
+    } catch (err) {
+      console.error(err);
+    } finally {
+      setIsLunchSubmitting(false);
+    }
+  };
 
   return (
     <div className="font-sans antialiased min-h-screen">
@@ -1231,6 +1283,68 @@ const HomePage: React.FC = () => {
                 Submit Anyway
               </button>
             </div>
+          </div>
+        </div>
+      </Modal>
+
+      {/* Lunch Time Warning Modal */}
+      <Modal isOpen={showLunchModal} onClose={() => setShowLunchModal(false)}>
+        <div className="fixed inset-0 z-50 flex items-center justify-center">
+          <div className="modal-overlay fixed inset-0 bg-opacity-50 backdrop-blur-sm transition-opacity duration-300"></div>
+          <div className="modal-content relative bg-white rounded-xl p-8 max-w-md w-full mx-4 shadow-xl transform transition-all duration-300">
+            <div className="flex justify-between items-start mb-6">
+              <div className="flex items-center">
+                <div className="mr-4">
+                  <FaExclamationTriangle className="text-yellow-600" style={{ fontSize: "2rem" }} />
+                </div>
+                <h3 className="text-xl font-semibold text-gray-800">
+                  <span className="text-yellow-700">Warning: Lunch Time</span>
+                </h3>
+              </div>
+            </div>
+            <p className="text-red-700 mb-4">
+              <span className="font-semibold">It is currently lunch time.</span> Starting the tracker early is not recommended.<br />
+              Please confirm if you have a valid reason before proceeding.
+            </p>
+            <form onSubmit={handleLunchSubmit} className="space-y-4">
+              <textarea
+                className="w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 border p-3 resize-none custom-scroll lunch-modal-textarea"
+                placeholder="Enter your reason for starting during lunch..."
+                rows={4}
+                required
+                value={lunchReason}
+                onChange={e => setLunchReason(e.target.value)}
+                disabled={isLunchSubmitting}
+              />
+              <div className="flex flex-col sm:flex-row justify-end gap-3 pt-2">
+                <button
+                  type="button"
+                  onClick={() => { setShowLunchModal(false); setLunchReason(""); }}
+                  className="px-6 py-2.5 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50 transition-colors duration-300 sm:w-auto w-full"
+                  disabled={isLunchSubmitting}
+                >
+                  Close
+                </button>
+                <button
+                  type="submit"
+                  className="px-6 py-2.5 bg-blue-600 hover:bg-blue-700 text-white rounded-lg shadow-sm transition-colors duration-300 sm:w-auto w-full flex items-center justify-center disabled:opacity-50 disabled:cursor-not-allowed"
+                  disabled={isLunchSubmitting || !lunchReason.trim()}
+                >
+                  {isLunchSubmitting ? (
+                    <><FaSpinner className="animate-spin mr-2" />Submitting...</>
+                  ) : (
+                    <>Submit & Start Tracker</>
+                  )}
+                </button>
+              </div>
+            </form>
+            <style>{`
+              .lunch-modal-textarea::placeholder {
+                color: #b0b7c3;
+                opacity: 1;
+                font-weight: 400;
+              }
+            `}</style>
           </div>
         </div>
       </Modal>

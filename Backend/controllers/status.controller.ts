@@ -138,6 +138,65 @@ Sparkle Time Tracker
   }
 };
 
+// POST /api/status/lunch-warning
+export const sendLunchWarning = async (
+  req: Request,
+  res: Response,
+  next: NextFunction
+) => {
+  try {
+    const { userName, userMail, reason } = req.body;
+    const currentDate = new Date().toLocaleDateString("en-IN", {
+      day: "2-digit",
+      month: "long",
+      year: "numeric",
+    });
+    const currentTime = new Date().toLocaleTimeString([], {
+      hour: "2-digit",
+      minute: "2-digit",
+      second: "2-digit",
+    });
+
+    const subject = `${userName} started the tracker during lunch hours - ${currentDate}`;
+
+    const template = `
+Hello Admin,
+<br />
+I wanted to share the reason for starting the tracker during lunch hours:
+<br />
+<br />
+<strong>Reason:</strong> ${reason}
+<br />
+<br />
+Date: ${currentDate}<br />
+Time: ${currentTime}<br />
+<br />
+
+Regards,<br />
+Sparkle Time Tracker
+`.trim();
+
+    const mailOptions = {
+      from: `"Time Tracker" <hg.sparkle015@gmail.com>`,
+      to: ADMIN_EMAIL,
+      cc: userMail,
+      subject: subject,
+      text: template.replace(/<[^>]+>/g, ""), // plain text fallback
+      html: template, // HTML version for formatting
+    };
+
+    await transporter.sendMail(mailOptions);
+    res
+      .status(200)
+      .json({ success: true, message: "Lunch warning email sent" });
+  } catch (error) {
+    console.error(error);
+    res
+      .status(500)
+      .json({ success: false, message: "Error sending lunch warning" });
+  }
+};
+
 // GET /api/status/mail-info
 export const getStatusMailInfo = async (
   req: Request,
