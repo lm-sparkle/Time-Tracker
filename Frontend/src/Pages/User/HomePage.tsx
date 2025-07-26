@@ -230,9 +230,9 @@ const HomePage: React.FC = () => {
   function isLunchTime() {
     const now = new Date();
     const start = new Date(now);
-    start.setHours(12, 0, 0, 0); // 1:00 pm
+    start.setHours(13, 0, 0, 0); // 1:00 pm
     const end = new Date(now);
-    end.setHours(13, 0, 0, 0); // 2:00 pm
+    end.setHours(14, 0, 0, 0); // 2:00 pm
     return now >= start && now < end;
   }
 
