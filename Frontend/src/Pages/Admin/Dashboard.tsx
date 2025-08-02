@@ -79,6 +79,126 @@ const Dashboard: React.FC = () => {
     content: null,
   });
 
+  const [popupUser, setPopupUser] = useState<User | null>(null);
+
+  function formatTime(dt: Date | string | null) {
+    if (!dt) return "-";
+    const date = new Date(dt);
+    if (isNaN(date.getTime())) return "-";
+    return date.toLocaleTimeString('en-US', {
+      hour: "2-digit",
+      minute: "2-digit",
+      second: "2-digit",
+      hour12: true,
+
+    });
+  }
+
+  const statusLabelMap: Record<string, string> = {
+    clocked_in: "Clocked In",
+    clocked_out: "Clocked Out",
+    clocked_out_for_break: "On Break",
+  };
+
+  const userRecordsModal = popupUser && (
+    <Modal isOpen={!!popupUser} onClose={() => setPopupUser(null)}>
+      <div
+        className="bg-white rounded-2xl shadow-2xl max-w-2xl w-full mx-4 overflow-y-auto relative mx-auto"
+        onClick={(e) => e.stopPropagation()}
+      >
+        {/* Header */}
+        <div className="flex justify-between items-center p-6 border-b border-gray-200 bg-gradient-to-r from-blue-50 to-indigo-50 rounded-t-2xl">
+          <div className="flex items-center space-x-3">
+            <img
+              className="w-14 h-14 rounded-full border-2 border-blue-200"
+              src={`https://ui-avatars.com/api/?name=${encodeURIComponent(
+                popupUser.fullName
+              )}&background=6366f1&color=fff&size=64`}
+              alt={popupUser.fullName}
+            />
+            <div>
+              <h3 className="text-xl font-semibold text-gray-900">
+                {popupUser.fullName}'s Records for Today
+              </h3>
+              <p className="text-sm text-gray-600">
+                All activity records for {popupUser.email}
+              </p>
+            </div>
+          </div>
+          <button
+            onClick={() => setPopupUser(null)}
+            className="text-gray-400 hover:text-gray-600 p-2 hover:bg-gray-100 rounded-lg transition-colors"
+            aria-label="Close"
+          >
+            <FaTimesCircle className="w-5 h-5" />
+          </button>
+        </div>
+
+        {/* User info */}
+        <div className="p-6">
+          {/* Entries Table */}
+          {userTimeEntries.filter((e) => e.userId === popupUser._id).length ===
+            0 ? (
+            <div className="text-gray-500 py-10 text-center">
+              No records found for today.
+            </div>
+          ) : (
+            <div className="overflow-x-auto">
+              <table className="min-w-full divide-y divide-gray-200 text-sm">
+                <thead className="bg-gray-50">
+                  <tr>
+                    <th className="px-4 py-3 text-left font-semibold text-blue-800">
+                      In Time
+                    </th>
+                    <th className="px-4 py-3 text-left font-semibold text-blue-800">
+                      Out Time
+                    </th>
+                    <th className="px-4 py-3 text-left font-semibold text-blue-800">
+                      Status
+                    </th>
+                    <th className="px-4 py-3 text-left font-semibold text-blue-800">
+                      Worked
+                    </th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {userTimeEntries
+                    .filter((entry) => entry.userId === popupUser._id)
+                    .sort((a, b) => {
+                      const tA = a.inTime ? new Date(a.inTime).getTime() : 0;
+                      const tB = b.inTime ? new Date(b.inTime).getTime() : 0;
+                      return tA - tB;
+                    })
+                    .map((entry, i) => (
+                      <tr
+                        key={i}
+                        className={i % 2 === 0 ? "bg-white" : "bg-gray-50"}
+                      >
+                        <td className="px-4 py-2">
+                          {formatTime(entry.inTime)}
+                        </td>
+                        <td className="px-4 py-2">
+                          {formatTime(entry.outTime)}
+                        </td>
+                        <td className="px-4 py-2">
+                          <span className="capitalize">
+                            {statusLabelMap[entry.status] || entry.status}
+                          </span>
+                        </td>
+                        <td className="px-4 py-2 font-mono">
+                          {entry.workingHours || "-"}
+                        </td>
+                      </tr>
+                    ))}
+                </tbody>
+              </table>
+            </div>
+          )}
+        </div>
+      </div>
+    </Modal>
+  );
+
   const API_URL = import.meta.env.VITE_API_URL as string;
 
   const fetchUsers = async () => {
@@ -331,42 +451,42 @@ const Dashboard: React.FC = () => {
     <div className="font-sans antialiased min-h-screen">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         <header>
-        <div className="mb-8">
-          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-            <div className="space-y-2">
-              <div className="flex items-center space-x-3">
-                <div className="p-3 bg-blue-600 rounded-xl shadow-lg">
-                  <FaUsers className="w-6 h-6 text-white" />
+          <div className="mb-8">
+            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+              <div className="space-y-2">
+                <div className="flex items-center space-x-3">
+                  <div className="p-3 bg-blue-600 rounded-xl shadow-lg">
+                    <FaUsers className="w-6 h-6 text-white" />
+                  </div>
+                  <div>
+                    <h1 className="text-3xl font-bold text-gray-900">
+                      User Management
+                    </h1>
+                    <p className="text-gray-600">
+                      Manage your team members and track their activities
+                    </p>
+                  </div>
                 </div>
-                <div>
-                  <h1 className="text-3xl font-bold text-gray-900">
-                    User Management
-                  </h1>
-                  <p className="text-gray-600">
-                    Manage your team members and track their activities
-                  </p>
+                <div className="flex items-center space-x-4 text-sm text-gray-500 px-1">
+                  <div className="flex items-center space-x-2">
+                    <FaClock className="w-4 h-4" />
+                    <span>Today: {new Date().toDateString()}</span>
+                  </div>
+                  <div className="flex items-center space-x-2">
+                    <FaUsers className="w-4 h-4" />
+                    <span>{totalUsers} Total Users</span>
+                  </div>
                 </div>
               </div>
-              <div className="flex items-center space-x-4 text-sm text-gray-500 px-1">
-                <div className="flex items-center space-x-2">
-                  <FaClock className="w-4 h-4" />
-                  <span>Today: {new Date().toDateString()}</span>
-                </div>
-                <div className="flex items-center space-x-2">
-                  <FaUsers className="w-4 h-4" />
-                  <span>{totalUsers} Total Users</span>
-                </div>
-              </div>
+              <button
+                onClick={openAddModal}
+                className="inline-flex items-center px-6 py-3 bg-gradient-to-r from-blue-600 to-blue-700 text-white font-semibold rounded-xl shadow-lg hover:from-blue-700 hover:to-blue-800 focus:outline-none focus:ring-4 focus:ring-blue-300 transition-all duration-200 transform hover:scale-105"
+              >
+                <FaPlus className="mr-2 w-4 h-4" />
+                Add New User
+              </button>
             </div>
-            <button
-              onClick={openAddModal}
-              className="inline-flex items-center px-6 py-3 bg-gradient-to-r from-blue-600 to-blue-700 text-white font-semibold rounded-xl shadow-lg hover:from-blue-700 hover:to-blue-800 focus:outline-none focus:ring-4 focus:ring-blue-300 transition-all duration-200 transform hover:scale-105"
-            >
-              <FaPlus className="mr-2 w-4 h-4" />
-              Add New User
-            </button>
           </div>
-        </div>
         </header>
 
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
@@ -468,6 +588,7 @@ const Dashboard: React.FC = () => {
                     <tr
                       key={user._id}
                       className="hover:bg-gray-50 transition-colors duration-200 cursor-pointer group"
+                      onClick={() => setPopupUser(user)}
                       onMouseEnter={(e) => {
                         const rect = (
                           e.currentTarget as HTMLElement
@@ -708,7 +829,9 @@ const Dashboard: React.FC = () => {
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap">
                         <button
-                          onClick={() => openStatusModal(user)}
+                          onClick={(e) => {
+                            e.stopPropagation(); openStatusModal(user)
+                          }}
                           className={`inline-flex items-center px-3 py-1 rounded-full text-xs font-semibold transition-colors ${user.isActive
                             ? "bg-green-100 text-green-800 hover:bg-green-200"
                             : "bg-red-100 text-red-800 hover:bg-red-200"
@@ -732,16 +855,20 @@ const Dashboard: React.FC = () => {
                           <button
                             className="p-2 rounded-lg hover:bg-blue-50 text-blue-600 transition-colors group-hover:bg-blue-50"
                             title="Edit User"
-                            onClick={() => openEditModal(user)}
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              openEditModal(user);
+                            }}
                           >
                             <FaEdit className="w-4 h-4" />
                           </button>
                           <button
                             className="p-2 rounded-lg hover:bg-red-50 text-red-600 transition-colors group-hover:bg-red-50"
                             title="Delete User"
-                            onClick={() =>
-                              handleDeleteUser(user._id, user.fullName)
-                            }
+                            onClick={e => {
+                              e.stopPropagation();
+                              handleDeleteUser(user._id, user.fullName);
+                            }}
                           >
                             <FaTrash className="w-4 h-4" />
                           </button>
@@ -1057,6 +1184,9 @@ const Dashboard: React.FC = () => {
           </div>
         )}
       </Modal>
+
+      {/* User Records Modal */}
+      {userRecordsModal}
     </div>
   );
 };
