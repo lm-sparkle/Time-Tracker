@@ -17,7 +17,6 @@ import {
   FaUsers,
   FaChartBar,
   FaFilter,
-  FaPlus,
 } from "react-icons/fa";
 import Modal from "../../Components/Modal";
 
