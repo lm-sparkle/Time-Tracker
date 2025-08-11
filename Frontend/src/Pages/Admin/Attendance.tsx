@@ -17,6 +17,7 @@ import {
   FaUsers,
   FaChartBar,
   FaFilter,
+  FaPlus,
 } from "react-icons/fa";
 import Modal from "../../Components/Modal";
 
@@ -69,6 +70,9 @@ const Attendance: React.FC = () => {
   } | null>(null);
 
   const [isOpen, setIsOpen] = useState(false);
+  const [holidays, setHolidays] = useState<{ date: string; name: string }[]>(
+    []
+  );
 
   const handleResetFilters = () => {
     setStartDate("");
@@ -234,8 +238,20 @@ const Attendance: React.FC = () => {
     }
   };
 
+  const fetchHolidays = async () => {
+    try {
+      const res = await api.get("/holidays", {
+        headers: { Authorization: `Bearer ${sessionStorage.getItem("token")}` },
+      });
+      setHolidays(res.data);
+    } catch (err) {
+      console.error("Failed to fetch holidays", err);
+    }
+  };
+
   useEffect(() => {
     fetchUsers();
+    fetchHolidays();
   }, []);
 
   const attendanceStatusMap = useMemo(() => {
@@ -258,26 +274,43 @@ const Attendance: React.FC = () => {
     let fullDay = 0;
     let halfDay = 0;
     let absent = 0;
+
     datesISO.forEach((dateISO) => {
       const date = new Date(dateISO);
       if (date.getDay() === 0) return; // skip Sundays
+
+      const isHolidayDate = holidays.some(
+        (h) => new Date(h.date).toISOString().slice(0, 10) === dateISO
+      );
+      if (isHolidayDate) {
+        return;
+      }
+
       const key = `${user._id}_${dateISO}`;
       const attendanceData = attendanceStatusMap[key];
       const attendanceStatus = attendanceData?.attendanceStatus;
-      // Sum all workingHours for this user on this date (for Saturday logic)
+
+      // Saturday logic
       let totalSeconds = 0;
       if (date.getDay() === 6) {
         totalSeconds = fetchedEntries
-          .filter((entry) => entry.userId === user._id && entry.dateString === dateISO)
-          .reduce((sum, entry) => sum + timeStrToSeconds(entry.workingHours), 0);
+          .filter(
+            (entry) => entry.userId === user._id && entry.dateString === dateISO
+          )
+          .reduce(
+            (sum, entry) => sum + timeStrToSeconds(entry.workingHours),
+            0
+          );
       } else {
         totalSeconds = timeStrToSeconds(attendanceData?.workingHours);
       }
+
       const isToday = isTodayISO(dateISO);
       const hasEntryToday = fetchedEntries.some(
         (entry) => entry.userId === user._id && entry.dateString === dateISO
       );
-      // Saturday logic: if Saturday and totalSeconds >= 14400, count as full day
+
+      // Saturday rule
       if (date.getDay() === 6 && totalSeconds >= 14400) {
         fullDay++;
         return;
@@ -304,8 +337,210 @@ const Attendance: React.FC = () => {
         }
       }
     });
+
     userSummaryCounts[user._id] = { fullDay, halfDay, absent };
   });
+
+    function renderAttendanceCell(
+    user: User,
+    isoDate: string,
+    index: number
+  ): React.ReactNode {
+    // Check if this date is a holiday and get holiday name
+    const holiday = holidays.find(
+      (h) => new Date(h.date).toISOString().slice(0, 10) === isoDate
+    );
+    if (holiday) {
+      // Holiday cell spanning all users, only render for first user
+      if (index === 0) {
+        return (
+          <td
+            key={`${user._id}_${isoDate}_holiday`}
+            colSpan={users.length}
+            className="px-8 py-4 text-center cursor-default border-b border-gray-100 bg-blue-50 align-middle min-w-[120px]"
+          >
+            <div className="mx-auto flex items-center justify-center space-x-2 text-blue-600 font-semibold">
+              <span>Holiday Leave - {holiday.name}</span>
+            </div>
+          </td>
+        );
+      } else {
+        return null; // skip rendering other user cells on holiday row
+      }
+    }
+
+    const date = new Date(isoDate);
+    const isSaturday = date.getDay() === 6;
+    const isSunday = date.getDay() === 0;
+    const isToday = isTodayISO(isoDate);
+    const hasEntryToday = fetchedEntries.some(
+      (entry) => entry.userId === user._id && entry.dateString === isoDate
+    );
+
+    const key = `${user._id}_${isoDate}`;
+    const attendanceData = attendanceStatusMap[key];
+    const attendanceStatus = attendanceData?.attendanceStatus;
+
+    // Calculate total seconds for Saturday logic
+    let totalSeconds = 0;
+    if (isSaturday) {
+      totalSeconds = fetchedEntries
+        .filter((entry) => entry.userId === user._id && entry.dateString === isoDate)
+        .reduce((sum, entry) => sum + timeStrToSeconds(entry.workingHours), 0);
+    } else {
+      totalSeconds = timeStrToSeconds(attendanceData?.workingHours);
+    }
+
+    let cellClass = `px-8 py-4 transition-colors duration-200 cursor-pointer border-b border-gray-100 bg-white align-middle min-w-[120px]`;
+    if (index === users.length - 1) cellClass += " rounded-r-xl";
+    if (isSunday) {
+      // Sunday cell - gray text, no click
+      return (
+        <td
+          key={user._id + isoDate}
+          className={"text-center text-gray-300 bg-white px-8 py-4 align-middle min-w-[120px]"}
+        >
+          <div className="mx-auto flex items-center justify-center">
+            <span className="text-xs text-gray-500" title="Sunday (not counted)">
+              -
+            </span>
+          </div>
+        </td>
+      );
+    }
+
+    // Saturday full-day check
+    if (isSaturday && totalSeconds >= 14400) {
+      return (
+        <td
+          key={user._id + isoDate}
+          className={`${cellClass} hover:bg-green-50`}
+          onClick={() => openModal(user, isoDate)}
+        >
+          <div className="mx-auto flex items-center justify-center">
+            <FaCheckCircle
+              className="text-green-500 w-5 h-5 text-xl"
+              title="Saturday: working hours ≥ 4h, counted as Full Day"
+            />
+          </div>
+        </td>
+      );
+    }
+
+    // Render based on attendance status or entries with consistent styles and icons
+    const renderIcon = (icon: React.ReactNode, title: string, colorClass: string) => (
+      <div className="mx-auto flex items-center justify-center">
+        {React.cloneElement(icon as React.ReactElement<any>, {
+          className: `${colorClass} w-5 h-5 text-xl`,
+          title,
+        })}
+      </div>
+    );
+
+    if (isToday) {
+      switch (attendanceStatus) {
+        case "full_day":
+          return (
+            <td
+              key={user._id + isoDate}
+              className={`${cellClass} hover:bg-green-50 min-w-[120px]`}
+              onClick={() => openModal(user, isoDate)}
+            >
+              {renderIcon(<FaCheckCircle />, "Full Day", "text-green-500")}
+            </td>
+          );
+        case "half_day":
+          return (
+            <td
+              key={user._id + isoDate}
+              className={`${cellClass} hover:bg-amber-50 min-w-[120px]`}
+              onClick={() => openModal(user, isoDate)}
+            >
+              {renderIcon(<FaCheckCircle />, "Half Day", "text-amber-400")}
+            </td>
+          );
+        case "absent":
+          return (
+            <td
+              key={user._id + isoDate}
+              className={`${cellClass} hover:bg-red-50 min-w-[120px]`}
+              onClick={() => openModal(user, isoDate)}
+            >
+              {renderIcon(<FaTimesCircle />, "Absent", "text-red-500")}
+            </td>
+          );
+        default:
+          // No status but entry exists - count as present full day; else absent
+          if (hasEntryToday) {
+            return (
+              <td
+                key={user._id + isoDate}
+                className={`${cellClass} hover:bg-green-50 min-w-[120px]`}
+                onClick={() => openModal(user, isoDate)}
+              >
+                {renderIcon(<FaCheckCircle />, "Present (entry exists, status not set)", "text-green-500")}
+              </td>
+            );
+          } else {
+            return (
+              <td
+                key={user._id + isoDate}
+                className={`${cellClass} hover:bg-red-50 min-w-[120px]`}
+                onClick={() => openModal(user, isoDate)}
+              >
+                {renderIcon(<FaTimesCircle />, "Absent (no entry)", "text-red-500")}
+              </td>
+            );
+          }
+      }
+    }
+
+    // Non-today dates
+    if (!attendanceStatus) {
+      return (
+        <td
+          key={user._id + isoDate}
+          className={`${cellClass} hover:bg-red-50 min-w-[120px]`}
+          onClick={() => openModal(user, isoDate)}
+        >
+          {renderIcon(<FaTimesCircle />, "Absent (no status)", "text-red-500")}
+        </td>
+      );
+    }
+
+    switch (attendanceStatus) {
+      case "full_day":
+        return (
+          <td
+            key={user._id + isoDate}
+            className={`${cellClass} hover:bg-green-50 min-w-[120px]`}
+            onClick={() => openModal(user, isoDate)}
+          >
+            {renderIcon(<FaCheckCircle />, "Full Day", "text-green-500")}
+          </td>
+        );
+      case "half_day":
+        return (
+          <td
+            key={user._id + isoDate}
+            className={`${cellClass} hover:bg-amber-50 min-w-[120px]`}
+            onClick={() => openModal(user, isoDate)}
+          >
+            {renderIcon(<FaCheckCircle />, "Half Day", "text-amber-400")}
+          </td>
+        );
+      default:
+        return (
+          <td
+            key={user._id + isoDate}
+            className={`${cellClass} hover:bg-red-50 min-w-[120px]`}
+            onClick={() => openModal(user, isoDate)}
+          >
+            {renderIcon(<FaTimesCircle />, "Absent", "text-red-500")}
+          </td>
+        );
+    }
+  }
 
   return (
     <div className="min-h-screen">
@@ -428,184 +663,33 @@ const Attendance: React.FC = () => {
                 </tr>
               </thead>
               <tbody>
-                {datesISO.map((iso) => (
-                  <tr key={iso} className="bg-white">
-                    {/* Responsive table: adjust min-width, padding, font size, and sticky for date column */}
-                    <td className="sticky md:left-0 z-10 px-4 md:px-8 py-2 md:py-4 text-xs md:text-sm font-semibold text-gray-900 bg-white border-r border-gray-200 shadow-sm align-middle min-w-[120px] md:min-w-[200px] whitespace-nowrap">
-                      <span className="font-medium">
-                        {new Date(iso).toLocaleDateString("en-US", {
-                          weekday: "short",
-                          month: "short",
-                          day: "2-digit",
-                          year: "numeric"
-                        })}
-                      </span>
-                    </td>
-                    {users.map((user, idx) => {
-                      const key = `${user._id}_${iso}`;
-                      const attendanceData = attendanceStatusMap[key];
-                      const attendanceStatus = attendanceData?.attendanceStatus;
-                      const date = new Date(iso);
-                      const isSaturday = date.getDay() === 6;
-                      const isSunday = date.getDay() === 0;
-                      const isToday = isTodayISO(iso);
-                      const hasEntryToday = fetchedEntries.some(
-                        (entry) => entry.userId === user._id && entry.dateString === iso
-                      );
-                      // Sum all workingHours for this user on this date (for Saturday logic)
-                      let totalSeconds = 0;
-                      if (isSaturday) {
-                        totalSeconds = fetchedEntries
-                          .filter((entry) => entry.userId === user._id && entry.dateString === iso)
-                          .reduce((sum, entry) => sum + timeStrToSeconds(entry.workingHours), 0);
-                      } else {
-                        totalSeconds = timeStrToSeconds(attendanceData?.workingHours);
-                      }
-                      let cellClass = `px-8 py-4 transition-colors duration-200 cursor-pointer border-b border-gray-100 bg-white align-middle min-w-[120px]`;
-                      if (idx === users.length - 1) cellClass += ' rounded-r-xl';
-                      if (isSunday) cellClass = 'text-center text-gray-300 bg-white px-8 py-4 align-middle min-w-[120px]';
-                      // For Saturday, if totalSeconds >= 14400, show full day icon (green)
-                      if (isSaturday && totalSeconds >= 14400) {
-                        return (
-                          <td
-                            key={user._id + iso}
-                            className={cellClass + ' hover:bg-green-50'}
-                            onClick={() => openModal(user, iso)}
-                          >
-                            <div className="mx-auto flex items-center justify-center">
-                              <FaCheckCircle className="text-green-500 w-5 h-5 text-xl" title="Saturday: working hours ≥ 4h, counted as Full Day" />
-                            </div>
-                          </td>
-                        );
-                      }
-                      // Use only green for present (today)
-                      if (isSunday) {
-                        return (
-                          <td
-                            key={user._id + iso}
-                            className={cellClass + ' min-w-[120px]'}
-                          >
-                            <div className="mx-auto flex items-center justify-center">
-                              <span className="text-xs text-gray-500" title="Sunday (not counted)">-</span>
-                            </div>
-                          </td>
-                        );
-                      }
-                      if (isToday) {
-                        if (attendanceStatus === "full_day") {
-                          return (
-                            <td
-                              key={user._id + iso}
-                              className={cellClass + ' hover:bg-green-50 min-w-[120px]'}
-                              onClick={() => openModal(user, iso)}
-                            >
-                              <div className="mx-auto flex items-center justify-center">
-                                <FaCheckCircle className="text-green-500 w-5 h-5 text-xl" title="Full Day" />
-                              </div>
-                            </td>
-                          );
-                        } else if (attendanceStatus === "half_day") {
-                          return (
-                            <td
-                              key={user._id + iso}
-                              className={cellClass + ' hover:bg-amber-50 min-w-[120px]'}
-                              onClick={() => openModal(user, iso)}
-                            >
-                              <div className="mx-auto flex items-center justify-center">
-                                <FaCheckCircle className="text-amber-400 w-5 h-5 text-xl" title="Half Day" />
-                              </div>
-                            </td>
-                          );
-                        } else if (attendanceStatus === "absent") {
-                          return (
-                            <td
-                              key={user._id + iso}
-                              className={cellClass + ' hover:bg-red-50 min-w-[120px]'}
-                              onClick={() => openModal(user, iso)}
-                            >
-                              <div className="mx-auto flex items-center justify-center">
-                                <FaTimesCircle className="text-red-500 w-5 h-5 text-xl" title="Absent" />
-                              </div>
-                            </td>
-                          );
-                        } else if (hasEntryToday) {
-                          return (
-                            <td
-                              key={user._id + iso}
-                              className={cellClass + ' hover:bg-green-50 min-w-[120px]'}
-                              onClick={() => openModal(user, iso)}
-                            >
-                              <div className="mx-auto flex items-center justify-center">
-                                <FaCheckCircle className="text-green-500 w-5 h-5 text-xl" title="Present (entry exists, status not set)" />
-                              </div>
-                            </td>
-                          );
-                        } else {
-                          return (
-                            <td
-                              key={user._id + iso}
-                              className={cellClass + ' hover:bg-red-50 min-w-[120px]'}
-                              onClick={() => openModal(user, iso)}
-                            >
-                              <div className="mx-auto flex items-center justify-center">
-                                <FaTimesCircle className="text-red-500 w-5 h-5 text-xl" title="Absent (no entry)" />
-                              </div>
-                            </td>
-                          );
-                        }
-                      }
-                      if (!attendanceStatus) {
-                        return (
-                          <td
-                            key={user._id + iso}
-                            className={cellClass + ' hover:bg-red-50 min-w-[120px]'}
-                            onClick={() => openModal(user, iso)}
-                          >
-                            <div className="mx-auto flex items-center justify-center">
-                              <FaTimesCircle className="text-red-500 w-5 h-5 text-xl" title="Absent (no status)" />
-                            </div>
-                          </td>
-                        );
-                      } else if (attendanceStatus === "full_day") {
-                        return (
-                          <td
-                            key={user._id + iso}
-                            className={cellClass + ' hover:bg-green-50 min-w-[120px]'}
-                            onClick={() => openModal(user, iso)}
-                          >
-                            <div className="mx-auto flex items-center justify-center">
-                              <FaCheckCircle className="text-green-500 w-5 h-5 text-xl" title="Full Day" />
-                            </div>
-                          </td>
-                        );
-                      } else if (attendanceStatus === "half_day") {
-                        return (
-                          <td
-                            key={user._id + iso}
-                            className={cellClass + ' hover:bg-amber-50 min-w-[120px]'}
-                            onClick={() => openModal(user, iso)}
-                          >
-                            <div className="mx-auto flex items-center justify-center">
-                              <FaCheckCircle className="text-amber-400 w-5 h-5 text-xl" title="Half Day" />
-                            </div>
-                          </td>
-                        );
-                      } else {
-                        return (
-                          <td
-                            key={user._id + iso}
-                            className={cellClass + ' hover:bg-red-50 min-w-[120px]'}
-                            onClick={() => openModal(user, iso)}
-                          >
-                            <div className="mx-auto flex items-center justify-center">
-                              <FaTimesCircle className="text-red-500 w-5 h-5 text-xl" title="Absent" />
-                            </div>
-                          </td>
-                        );
-                      }
-                    })}
-                  </tr>
-                ))}
+                {datesISO.map((iso) => {
+                  const holiday = holidays.find(
+                    (h) => new Date(h.date).toISOString().slice(0, 10) === iso
+                  );
+                  return (
+                    <tr key={iso} className="bg-white">
+                      <td className="sticky md:left-0 z-10 px-4 md:px-8 py-2 md:py-4 text-xs md:text-sm font-semibold text-gray-900 bg-white border-r border-gray-200 shadow-sm align-middle min-w-[120px] md:min-w-[200px] whitespace-nowrap">
+                        <span className="font-medium">
+                          {new Date(iso).toLocaleDateString("en-US", {
+                            weekday: "short",
+                            month: "short",
+                            day: "2-digit",
+                            year: "numeric",
+                          })}
+                        </span>
+                        {holiday && <span className="ml-1 text-blue-500 font-normal">(Holiday)</span>}
+                      </td>
+
+                      {/* If it's a holiday, render one holiday cell for first user and skip all other user cells */}
+                      {holiday
+                        ? Array(users.length)
+                            .fill(null)
+                            .map((_, idx) => renderAttendanceCell(users[0], iso, idx))
+                        : users.map((user, idx) => renderAttendanceCell(user, iso, idx))}
+                    </tr>
+                  );
+                })}
                 <tr className="font-semibold border-t-2 border-gray-200 bg-white">
                   <td className="sticky left-0 z-10 px-8 py-5 text-sm font-semibold text-gray-900 bg-white border-r border-gray-200 shadow-sm align-middle min-w-[120px]">
                     <div className="flex items-center space-x-2 justify-center">
@@ -682,11 +766,10 @@ const Attendance: React.FC = () => {
               return (
                 <label
                   key={status}
-                  className={`block border-2 rounded-xl p-5 cursor-pointer transition-all duration-200 hover:shadow ${
-                    modalData.status === status
-                      ? `border-${options?.color}-500 bg-${options?.bgColor}-50 text-${options?.color}-700 shadow`
-                      : "border-gray-200 hover:border-gray-300 bg-white"
-                  }`}
+                  className={`block border-2 rounded-xl p-5 cursor-pointer transition-all duration-200 hover:shadow ${modalData.status === status
+                    ? `border-${options?.color}-500 bg-${options?.bgColor}-50 text-${options?.color}-700 shadow`
+                    : "border-gray-200 hover:border-gray-300 bg-white"
+                    }`}
                 >
                   <input
                     type="radio"
@@ -697,11 +780,10 @@ const Attendance: React.FC = () => {
                     className="hidden"
                   />
                   <div className="flex items-center">
-                    <div className={`mr-5 p-4 rounded-xl ${
-                      modalData.status === status 
-                        ? `bg-${options?.color}-100 text-${options?.color}-600`
-                        : "text-gray-400 bg-gray-100"
-                    }`}>
+                    <div className={`mr-5 p-4 rounded-xl ${modalData.status === status
+                      ? `bg-${options?.color}-100 text-${options?.color}-600`
+                      : "text-gray-400 bg-gray-100"
+                      }`}>
                       {options?.icon}
                     </div>
                     <div>

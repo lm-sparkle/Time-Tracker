@@ -126,6 +126,12 @@ const Navbar = () => {
                       >
                         Status Report
                       </Link>
+                      <Link
+                        to="/admin/holidays"
+                        className="font-medium hover:underline"
+                      >
+                        Holidays
+                      </Link>
 
                       {/* Avatar + Dropdown */}
                       <div className="relative">
@@ -195,6 +201,13 @@ const Navbar = () => {
                       onClick={() => setMobileMenuOpen(false)}
                     >
                       Status Report
+                    </Link>
+                    <Link
+                      to="/admin/holidays"
+                      className="block py-2 font-medium"
+                      onClick={() => setMobileMenuOpen(false)}
+                    >
+                      Holidays
                     </Link>
                     <button
                       onClick={() => {

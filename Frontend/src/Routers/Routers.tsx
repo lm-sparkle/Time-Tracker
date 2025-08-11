@@ -7,6 +7,7 @@ import PublicRoute from "./PublicRoute";
 import NotFound from "../Pages/NotFound";
 import Attendance from "../Pages/Admin/Attendance";
 import StatusReport from "../Pages/Admin/StatusReport";
+import Holidays from "../Pages/Admin/Holidays";
 
 const Routers = () => {
   return (
@@ -49,6 +50,14 @@ const Routers = () => {
           element={
             <ProtectedRoute allowedRoles={["admin"]}>
               <StatusReport />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/admin/holidays"
+          element={
+            <ProtectedRoute allowedRoles={["admin"]}>
+              <Holidays />
             </ProtectedRoute>
           }
         />

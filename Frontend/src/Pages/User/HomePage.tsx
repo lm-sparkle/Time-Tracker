@@ -111,6 +111,21 @@ const HomePage: React.FC = () => {
   const [showLunchModal, setShowLunchModal] = useState(false);
   const [lunchReason, setLunchReason] = useState("");
   const [isLunchSubmitting, setIsLunchSubmitting] = useState(false);
+  const [holidays, setHolidays] = useState<{ date: string; name: string }[]>(
+    []
+  );
+
+  const fetchHolidays = async () => {
+    try {
+      const res = await api.get("/holidays", {
+        headers: { Authorization: `Bearer ${sessionStorage.getItem("token")}` },
+      });
+      setHolidays(res.data);
+    } catch (err) {
+      console.error("Failed to fetch holidays", err);
+    }
+  };
+
 
   if (user) {
     sessionStorage.setItem("userId", user.id);
@@ -529,6 +544,7 @@ const HomePage: React.FC = () => {
 
   useEffect(() => {
     fetchEntriesForMonth();
+    fetchHolidays();
   }, []);
 
   const attendanceStatusMap = useMemo(() => {
@@ -567,57 +583,57 @@ const HomePage: React.FC = () => {
     const currentMonth = today.getMonth();
     const currentYear = today.getFullYear();
 
-    const pad = (num: number) => String(num).padStart(2, '0');
-
-    const todayISO = `${currentYear}-${pad(currentMonth + 1)}-${pad(currentDate)}`;
+    const pad = (num: number) => String(num).padStart(2, "0");
+    const todayISO = `${currentYear}-${pad(currentMonth + 1)}-${pad(
+      currentDate
+    )}`;
 
     for (let day = 1; day <= currentDate; day++) {
       const date = new Date(currentYear, currentMonth, day);
+
+      // ⛔ Skip Sundays
       if (date.getDay() === 0) continue;
 
-      const formattedDate = `${currentYear}-${pad(currentMonth + 1)}-${pad(day)}`;
+      // ✅ Skip Holidays
+      const formattedDate = `${currentYear}-${pad(currentMonth + 1)}-${pad(
+        day
+      )}`;
+      const isHolidayDate = holidays.some(
+        (h) => new Date(h.date).toISOString().slice(0, 10) === formattedDate
+      );
+      if (isHolidayDate) continue;
+
       const key = `${user?.id}_${formattedDate}`;
       const attendanceData = attendanceStatusMap[key];
       const status = attendanceData?.attendanceStatus;
-      const totalSeconds = attendanceData?.totalSeconds;
+      const totalSeconds = attendanceData?.totalSeconds || 0;
+
       const isToday = formattedDate === todayISO;
       const hasEntryToday = fetchedEntriesForAttendance.some(
         (entry) => entry.userId === user?.id && entry.dateString === todayISO
       );
 
-      if (
-        date.getDay() === 6 &&
-        totalSeconds >= 14400
-      ) {
+      // Saturday check
+      if (date.getDay() === 6 && totalSeconds >= 14400) {
         fullDay++;
         continue;
       }
 
       if (isToday) {
-        if (status === "full_day") {
-          fullDay++;
-        } else if (status === "half_day") {
-          halfDay++;
-        } else if (status === "absent") {
-          absent++;
-        } else if (hasEntryToday) {
-          fullDay++;
-        } else {
-          absent++;
-        }
+        if (status === "full_day") fullDay++;
+        else if (status === "half_day") halfDay++;
+        else if (status === "absent") absent++;
+        else if (hasEntryToday) fullDay++;
+        else absent++;
       } else {
-        if (status === "full_day") {
-          fullDay++;
-        } else if (status === "half_day") {
-          halfDay++;
-        } else {
-          absent++;
-        }
+        if (status === "full_day") fullDay++;
+        else if (status === "half_day") halfDay++;
+        else absent++;
       }
     }
 
     return { fullDay, halfDay, absent };
-  }, [attendanceStatusMap, user?.id, userTimes]);
+  }, [attendanceStatusMap, holidays, user?.id, fetchedEntriesForAttendance]);
 
   useEffect(() => {
     setAttendanceSummary(calculateUserAttendance);
