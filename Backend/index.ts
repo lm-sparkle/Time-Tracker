@@ -14,6 +14,7 @@ import loginRouter from "./routers/login.route";
 import userRouter from "./routers/user.route";
 import timeRouter from "./routers/time.route";
 import statusRouter from "./routers/status.route";
+import holidayRouter from "./routers/holiday.route";
 
 const app = express();
 app.use(express.json());
@@ -49,6 +50,7 @@ app.use("/api", authenticateJWT, ipRestrict, registerRouter);
 app.use("/api/users", authenticateJWT, ipRestrict, userRouter);
 app.use("/api/time", authenticateJWT, ipRestrict, timeRouter);
 app.use("/api/status", authenticateJWT, ipRestrict, statusRouter);
+app.use("/api", authenticateJWT, ipRestrict, holidayRouter);
 
 app.listen(PORT, () => {
   console.log(`Server is running on port ${PORT}`);
